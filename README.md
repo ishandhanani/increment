@@ -1,6 +1,6 @@
 # misc
 
-Various small projects and experiments. 
+Various small projects and experiments.
 
 ## Coding agent setup
 
@@ -10,6 +10,6 @@ This repository leverages [ruler](https://github.com/intellectronica/ruler) to m
 # install
 npm install -g @intellectronica/ruler
 
-# generate mds 
-ruler apply
+# generate mds
+ruler apply --no-gitignore
 ```
