@@ -13,3 +13,5 @@ npm install -g @intellectronica/ruler
 # generate mds
 ruler apply --no-gitignore
 ```
+
+test
