@@ -1,11 +1,3 @@
-<!-- Source: .ruler/AGENTS.md -->
-
-# VCS Misc Repository Structure
-
-This is a misc repository containing various small projects and experiments.
-
-<!-- Source: .ruler/python_dev.md -->
-
 # Python Development Guidelines
 
 # Tools

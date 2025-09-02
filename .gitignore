@@ -1,6 +1,8 @@
+*.bak
 
 # START Ruler Generated Files
-/.cursor/rules/ruler_cursor_instructions.mdc
-/.cursor/rules/ruler_cursor_instructions.mdc.bak
+/CLAUDE.md
 /CLAUDE.md.bak
+/inboxy/CLAUDE.md
+/inboxy/CLAUDE.md.bak
 # END Ruler Generated Files
