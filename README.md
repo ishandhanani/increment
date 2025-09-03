@@ -11,5 +11,5 @@ This repository leverages [ruler](https://github.com/intellectronica/ruler) to m
 npm install -g @intellectronica/ruler
 
 # generate mds
-ruler apply --no-gitignore
+ruler apply
 ```
