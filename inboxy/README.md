@@ -1,188 +1,218 @@
-# Inboxy 📬
+# Inboxy
 
-A powerful Gmail inbox cleanup tool that helps you analyze, organize, and declutter your email efficiently using the Gmail API.
+AI-powered Gmail client for the command line. Get a morning digest of what actually matters, with direct links to open emails in Gmail.
 
 ## Features
 
-- **📊 Inbox Discovery**: Analyze your inbox with detailed statistics
+- **Smart Inbox View** - See your emails like Gmail, but in the terminal
+- **AI-Powered Digests** - Get a morning report of urgent items and what can be deleted
+- **Direct Gmail Links** - Click any email in the digest to open it in Gmail
+- **Bulk Management** - Preview and delete/archive emails using Gmail search syntax
+- **Smart Caching** - 1-hour cache to avoid redundant API calls
 
-  - Top senders and domains (last 6 months)
-  - Category breakdowns (promotions, social, updates, forums)
-  - Age-based message counts
-  - Large attachments and file analysis
-  - Newsletter detection via List-Unsubscribe headers
+## Installation
 
-- **🔍 Smart Preview**: Preview messages matching Gmail query syntax before taking action
+```bash
+# Navigate to inboxy directory
+cd inboxy
 
-- **🗑️ Bulk Operations**:
+# Install with uv (creates venv and installs dependencies)
+uv sync
 
-  - Permanently delete messages (bypasses trash)
-  - Archive messages (remove from inbox)
-  - Batch processing with progress indicators
+# Install as editable package for development
+uv pip install -e .
+```
 
-- **⚙️ Filter Management**: Create Gmail filters to automatically delete or archive future emails from specific senders
+## Configuration
 
-## Setup
+### 1. Gmail API Setup
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Enable Gmail API
+4. Create OAuth 2.0 credentials (Desktop application)
+5. Download as `credentials.json` to the inboxy directory
 
-### Prerequisites
+### 2. OpenRouter API
+1. Get your API key at [openrouter.ai](https://openrouter.ai/keys)
+2. Add to `.env` file
 
-- Python 3.11+
-- Gmail account with API access enabled
-- Google Cloud Console project with Gmail API enabled
+### 3. Environment Setup
+```bash
+# Copy example environment file
+cp .env.example .env
 
-### Installation
-
-1. **Enable Gmail API**:
-
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing one
-   - Enable the Gmail API
-   - Create OAuth 2.0 credentials (Desktop application type)
-   - Download the credentials file as `credentials.json` in the project directory
-
-2. **Run the script**:
-   ```bash
-   python clean.py discover
-   ```
-   On first run, it will open your browser for OAuth consent and save the token to `token.json`.
-
-### Dependencies
-
-The script uses PEP 723 inline metadata. Dependencies are automatically managed:
-
-- `google-api-python-client`
-- `google-auth-httplib2`
-- `google-auth-oauthlib`
-- `textual`
+# Edit .env with your API keys
+# Required: OPENROUTER_API_KEY
+# Optional: Email settings for digest delivery
+```
 
 ## Usage
 
-### Discover Your Inbox
+After installation with `uv sync`, you can run inboxy in several ways:
 
-Get comprehensive inbox statistics and insights:
+### Using uv run (Recommended)
+```bash
+# View inbox
+uv run inboxy
+
+# Generate digest
+uv run inboxy digest
+
+# Preview emails
+uv run inboxy preview --query "from:newsletter@example.com"
+```
+
+### After installing as package
+```bash
+# If you ran: uv pip install -e .
+inboxy
+inboxy digest
+inboxy preview --query "older_than:30d"
+```
+
+### Direct Python execution
+```bash
+uv run python inboxy.py
+uv run python inboxy.py digest --send
+```
+
+## Commands
+
+### View Inbox (default)
+```bash
+uv run inboxy
+```
+Shows your inbox with sender, subject, and date - just like Gmail.
+
+### AI Digest
+```bash
+# Generate digest
+uv run inboxy digest
+
+# Email it to yourself
+uv run inboxy digest --send
+
+# Force fresh data (skip cache)
+uv run inboxy digest --fresh
+```
+
+The digest shows:
+- 🔴 **URGENT items** that need response before starting your day
+- 🗑️ **Deletable emails** grouped by sender with exact commands to remove them
+- Direct Gmail links to open any email
+
+### Preview & Manage
+
+#### Using Cleanup Presets
+```bash
+# List available cleanup presets
+uv run inboxy preview --list-presets
+
+# Preview promotional emails
+uv run inboxy preview --query promotions
+
+# Delete old promotional emails (older than 7 days)
+uv run inboxy preview --query old-promotions --delete
+
+# Clean up old noise (promotions/social older than 7 days)
+uv run inboxy preview --query noise --delete
+
+# Archive ancient emails (older than 1 year)
+uv run inboxy preview --query ancient --archive
+```
+
+#### Custom Gmail Searches
+```bash
+# Preview any Gmail search
+uv run inboxy preview --query "from:newsletter@example.com"
+uv run inboxy preview --query "older_than:30d"
+
+# Delete emails
+uv run inboxy preview --query "category:promotions" --delete
+
+# Archive emails
+uv run inboxy preview --query "older_than:90d" --archive
+```
+
+#### Available Cleanup Presets
+
+| Preset | Description | Gmail Query |
+|--------|-------------|-------------|
+| `promotions` | All promotional emails | `category:promotions` |
+| `social` | Social media notifications | `category:social` |
+| `newsletters` | Emails with unsubscribe headers | `list:*` |
+| `old-promotions` | Promotions older than 7 days | `category:promotions older_than:7d` |
+| `old-social` | Social emails older than 30 days | `category:social older_than:30d` |
+| `noise` | Promotions/social older than 7 days | `(category:promotions OR category:social) older_than:7d` |
+| `old-noise` | All categories older than 30 days | `(category:promotions OR category:social OR category:updates) older_than:30d` |
+| `unread-old` | Unread emails older than 30 days | `is:unread older_than:30d` |
+| `ancient` | Emails older than 1 year | `older_than:1y` |
+
+## Morning Automation
+
+Add to your crontab for daily 7 AM digest:
+```bash
+crontab -e
+# Add this line (adjust path as needed):
+0 7 * * * cd /path/to/inboxy && uv run inboxy digest --send
+```
+
+## Gmail Search Syntax
+
+| Query | Description |
+|-------|-------------|
+| `from:person@email.com` | From specific sender |
+| `subject:meeting` | Subject contains "meeting" |
+| `is:unread` | Unread emails |
+| `has:attachment` | Has attachments |
+| `larger:5M` | Larger than 5MB |
+| `older_than:30d` | Older than 30 days |
+| `newer_than:1d` | From last 24 hours |
+| `category:promotions` | Promotional emails |
+
+## Development
 
 ```bash
-python clean.py discover
+# Run tests
+uv run pytest
+
+# Format code
+uv run black src/ inboxy.py
+uv run ruff check src/ inboxy.py
+
+# Type checking
+uv run mypy src/
 ```
 
-Example output:
+## Project Structure
 
 ```
-📬 INBOX: 15,432 total, 1,247 unread
-
-— Top senders in INBOX (last 6 months) —
-  127  newsletters@company.com
-   89  noreply@github.com
-   56  notifications@slack.com
-
-Top domains:
-  245  github.com
-  189  company.com
-  134  slack.com
-
-Newsletters (List-Unsubscribe detected) in sample: 1,432
-Category promotions  : 3,245
-Category social      : 892
-Category updates     : 2,156
-Older than   1y: 8,934
-Larger than 5MB: 23
+inboxy/
+├── inboxy.py              # CLI entry point
+├── src/
+│   └── inboxy/
+│       ├── __init__.py    # Package exports
+│       ├── models.py      # Data models
+│       ├── gmail.py       # Gmail API client
+│       ├── ai.py          # AI analysis
+│       └── digest.py      # Digest generation
+├── pyproject.toml         # Project configuration
+├── .env.example           # Environment template
+└── README.md              # This file
 ```
 
-### Preview Messages
-
-Preview messages matching a Gmail query before taking action:
+## Environment Variables
 
 ```bash
-python clean.py preview --query "from:noreply@company.com older_than:6m"
-python clean.py preview --query "category:promotions older_than:3m" --sample 20
+# Required
+OPENROUTER_API_KEY=sk-or-v1-xxxxx
+
+# Optional - for email digests
+DIGEST_RECIPIENT_EMAIL=you@gmail.com
+SMTP_USER=you@gmail.com
+SMTP_PASSWORD=app-specific-password
 ```
 
-### Bulk Delete
+## License
 
-Permanently delete messages (bypasses trash):
-
-```bash
-python clean.py delete --query "category:promotions older_than:1y"
-```
-
-⚠️ **Warning**: This permanently deletes emails. You'll be prompted to confirm with "yes".
-
-### Bulk Archive
-
-Remove messages from inbox (archive):
-
-```bash
-python clean.py archive --query "from:newsletters@company.com older_than:3m"
-```
-
-### Create Filters
-
-Automatically handle future emails from specific senders:
-
-```bash
-# Auto-delete future emails from sender
-python clean.py filter --from "spam@company.com" --action delete
-
-# Auto-archive future emails from sender
-python clean.py filter --from "newsletters@company.com" --action archive
-```
-
-## Gmail Query Syntax
-
-Use Gmail's powerful search syntax for precise targeting:
-
-| Query                     | Description                          |
-| ------------------------- | ------------------------------------ |
-| `from:user@domain.com`    | From specific sender                 |
-| `to:me`                   | Sent to you                          |
-| `subject:"meeting notes"` | Specific subject                     |
-| `older_than:6m`           | Older than 6 months (d/w/m/y)        |
-| `newer_than:1w`           | Newer than 1 week                    |
-| `category:promotions`     | Promotional emails                   |
-| `category:social`         | Social network emails                |
-| `category:updates`        | Updates/notifications                |
-| `category:forums`         | Forum/mailing list emails            |
-| `larger:5M`               | Larger than 5MB                      |
-| `has:attachment`          | Has attachments                      |
-| `is:unread`               | Unread messages                      |
-| `in:inbox`                | In inbox (default for most commands) |
-
-Combine queries with `AND`, `OR`, and parentheses:
-
-```bash
-python clean.py preview --query "category:promotions AND older_than:6m"
-python clean.py delete --query "(from:old-newsletter.com OR from:spam-site.com) older_than:1m"
-```
-
-## Safety Features
-
-- **Confirmation prompts** before destructive operations
-- **Preview mode** to see what will be affected
-- **Progress indicators** for batch operations
-- **Gentle API usage** with built-in rate limiting
-- **Error handling** for individual message failures
-
-## File Structure
-
-- `clean.py` - Main application script
-- `token.json` - OAuth credentials (generated on first run)
-- `credentials.json` - OAuth client secrets (you provide this)
-
-## Recommended Workflow
-
-1. **Start with discovery**: `python clean.py discover`
-2. **Preview before action**: Always preview queries first
-3. **Start small**: Test with small batches before bulk operations
-4. **Create filters**: Set up automation for recurring cleanup
-5. **Regular maintenance**: Run discovery monthly to stay on top of inbox growth
-
-## Troubleshooting
-
-- **"Missing credentials.json"**: Download OAuth credentials from Google Cloud Console
-- **"Insufficient permissions"**: The script requests full Gmail scope for delete/filter operations
-- **Rate limiting**: Built-in delays prevent API quota issues
-- **Token expiry**: Script automatically refreshes tokens as needed
-
-## Security Note
-
-This tool requires full Gmail access to perform delete operations and create filters. Your credentials are stored locally in `token.json` and never transmitted elsewhere.
+MIT
