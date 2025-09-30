@@ -1,0 +1,85 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		IncrementApp.swift in Sources = {isa = PBXBuildFile; };
+		ContentView.swift in Sources = {isa = PBXBuildFile; };
+		Models.swift in Sources = {isa = PBXBuildFile; };
+		SteelProgressionEngine.swift in Sources = {isa = PBXBuildFile; };
+		SessionManager.swift in Sources = {isa = PBXBuildFile; };
+		RestTimer.swift in Sources = {isa = PBXBuildFile; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		Increment.app = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Increment.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		IncrementApp.swift = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncrementApp.swift; sourceTree = "<group>"; };
+		ContentView.swift = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		Models.swift = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		SteelProgressionEngine.swift = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteelProgressionEngine.swift; sourceTree = "<group>"; };
+		SessionManager.swift = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
+		RestTimer.swift = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimer.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		MainGroup = {
+			isa = PBXGroup;
+			children = (
+				Increment,
+				Products,
+			);
+			sourceTree = "<group>";
+		};
+		Products = {
+			isa = PBXGroup;
+			children = (
+				Increment.app,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		Increment = {
+			isa = PBXGroup;
+			children = (
+				IncrementApp.swift,
+				ContentView.swift,
+				Models.swift,
+				SteelProgressionEngine.swift,
+				SessionManager.swift,
+				RestTimer.swift,
+			);
+			path = Increment;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin XCBuildConfiguration section */
+		Debug = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = Increment;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Debug;
+		};
+		Release = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = Increment;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+	};
+	rootObject = MainGroup;
+}
