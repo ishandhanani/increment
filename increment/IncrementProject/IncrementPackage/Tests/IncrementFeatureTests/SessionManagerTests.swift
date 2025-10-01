@@ -88,6 +88,61 @@ struct SessionManagerTests {
         }
     }
 
+    /// Test that only the first exercise has warmups
+    /// Critical: Subsequent exercises should skip warmups to save time
+    @Test("SessionManager: Smart warmup sets - only first exercise")
+    func testSmartWarmupSets() async {
+        // Arrange
+        let manager = await SessionManager()
+        let planId = await MainActor.run { manager.workoutPlans.first!.id }
+
+        // Act - Start and setup
+        await MainActor.run {
+            manager.startSession(workoutPlanId: planId)
+            manager.logPreWorkoutFeeling(PreWorkoutFeeling(rating: 4))
+            manager.skipStretching()
+        }
+
+        // Assert - First exercise should start with warmup
+        await MainActor.run {
+            if case .warmup(let step) = manager.sessionState {
+                #expect(step == 0)
+            } else {
+                Issue.record("Expected warmup state for first exercise")
+            }
+        }
+
+        // Act - Complete first exercise warmup and sets
+        await MainActor.run {
+            manager.advanceWarmup()
+            manager.advanceWarmup()
+            manager.acknowledgeLoad()
+        }
+
+        let firstExerciseSets = await MainActor.run {
+            let exerciseId = manager.currentExerciseLog!.exerciseId
+            return manager.exerciseProfiles[exerciseId]!.sets
+        }
+
+        for _ in 0..<firstExerciseSets {
+            await MainActor.run {
+                manager.logSet(reps: 6, rating: .hard)
+                manager.advanceToNextSet()
+            }
+        }
+
+        // Act - Move to second exercise
+        await MainActor.run {
+            manager.advanceToNextExercise()
+        }
+
+        // Assert - Second exercise should skip warmup, go directly to load
+        await MainActor.run {
+            #expect(manager.sessionState == .load)
+            #expect(manager.isFirstExercise == false)
+        }
+    }
+
     /// Test completing an entire workout (smoke test)
     /// Critical: End-to-end test ensuring all components work together
     @Test("SessionManager: Complete workout smoke test")
@@ -106,12 +161,19 @@ struct SessionManagerTests {
         let exerciseCount = await MainActor.run { manager.workoutPlans.first!.order.count }
 
         // Act - Complete all exercises
-        for _ in 0..<exerciseCount {
-            // Complete warmup
-            await MainActor.run {
-                manager.advanceWarmup()
-                manager.advanceWarmup()
-                manager.acknowledgeLoad()
+        for exerciseIndex in 0..<exerciseCount {
+            // Complete warmup (only first exercise)
+            if exerciseIndex == 0 {
+                await MainActor.run {
+                    manager.advanceWarmup()
+                    manager.advanceWarmup()
+                    manager.acknowledgeLoad()
+                }
+            } else {
+                // Subsequent exercises skip warmup, just acknowledge load
+                await MainActor.run {
+                    manager.acknowledgeLoad()
+                }
             }
 
             // Complete all working sets
