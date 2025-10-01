@@ -14,6 +14,7 @@ class SessionManager {
     var sessionState: SessionState = .intro
     var currentExerciseLog: ExerciseSessionLog?
     var nextPrescription: (reps: Int, weight: Double)?
+    var isFirstExercise: Bool = true
 
     // MARK: - Data
 
@@ -27,7 +28,7 @@ class SessionManager {
 
     // MARK: - Session State
 
-    enum SessionState {
+    enum SessionState: Equatable {
         case intro
         case preWorkout
         case stretching(timeRemaining: Int)  // 5-minute stretching countdown
@@ -55,6 +56,7 @@ class SessionManager {
         currentSession = Session(workoutPlanId: plan.id)
         currentExerciseIndex = 0
         currentSetIndex = 0
+        isFirstExercise = true
 
         // Show pre-workout feeling screen
         sessionState = .preWorkout
@@ -115,7 +117,7 @@ class SessionManager {
     }
 
     func startExercise(exerciseId: UUID) {
-        guard let profile = exerciseProfiles[exerciseId] else { return }
+        guard exerciseProfiles[exerciseId] != nil else { return }
 
         // Get starting weight from state or use default
         let startWeight = exerciseStates[exerciseId]?.lastStartLoad ?? 45.0  // Default bar weight
@@ -126,7 +128,16 @@ class SessionManager {
         )
 
         currentSetIndex = 0
-        sessionState = .warmup(step: 0)
+
+        // Only do warmups for the first exercise
+        if isFirstExercise {
+            sessionState = .warmup(step: 0)
+            isFirstExercise = false
+        } else {
+            // Skip warmups, go directly to load
+            sessionState = .load
+            computeInitialPrescription()
+        }
     }
 
     // MARK: - Warmup Flow
@@ -134,7 +145,7 @@ class SessionManager {
     func advanceWarmup() {
         guard case .warmup(let step) = sessionState else { return }
         guard let exerciseLog = currentExerciseLog,
-              let profile = exerciseProfiles[exerciseLog.exerciseId] else { return }
+              exerciseProfiles[exerciseLog.exerciseId] != nil else { return }
 
         if step == 0 {
             // Move to 70%×3
