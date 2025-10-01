@@ -21,6 +21,9 @@ struct SessionManagerTests {
     @Test("SessionManager: Pre-workout to first set flow")
     func testPreWorkoutToFirstSet() async {
         // Arrange
+        // Clear any persisted data from previous tests
+        await PersistenceManager.shared.clearAll()
+
         let manager = await SessionManager()
         let planId = await MainActor.run { manager.workoutPlans.first!.id }
 
@@ -93,6 +96,7 @@ struct SessionManagerTests {
     @Test("SessionManager: Smart warmup sets - only first exercise")
     func testSmartWarmupSets() async {
         // Arrange
+        await PersistenceManager.shared.clearAll()
         let manager = await SessionManager()
         let planId = await MainActor.run { manager.workoutPlans.first!.id }
 
@@ -148,6 +152,7 @@ struct SessionManagerTests {
     @Test("SessionManager: Complete workout smoke test")
     func testCompleteWorkout() async {
         // Arrange
+        await PersistenceManager.shared.clearAll()
         let manager = await SessionManager()
         let planId = await MainActor.run { manager.workoutPlans.first!.id }
 
@@ -216,6 +221,7 @@ struct SessionManagerTests {
     @Test("SessionManager: Weekly cap enforcement with load history")
     func testWeeklyCapEnforcement() async {
         // Arrange
+        await PersistenceManager.shared.clearAll()
         let manager = await SessionManager()
         let planId = await MainActor.run { manager.workoutPlans.first!.id }
 
@@ -323,6 +329,7 @@ struct SessionManagerTests {
     @Test("SessionManager: No recent loads for new exercise")
     func testNoRecentLoadsForNewExercise() async {
         // Arrange
+        await PersistenceManager.shared.clearAll()
         let manager = await SessionManager()
         let planId = await MainActor.run { manager.workoutPlans.first!.id }
 
