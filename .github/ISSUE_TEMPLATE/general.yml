@@ -1,0 +1,20 @@
+name: General Issue
+description: General issue template
+title: "[PROJECT] "
+body:
+  - type: input
+    id: title
+    attributes:
+      label: Title
+      description: Brief description of the issue
+      placeholder: Enter issue title here
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Detailed description of the issue
+      placeholder: Enter detailed description here
+    validations:
+      required: true
