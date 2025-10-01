@@ -3,6 +3,7 @@ import SwiftUI
 @MainActor
 public struct ContentView: View {
     @Environment(SessionManager.self) private var sessionManager
+    @State private var showingAnalytics = false
 
     public init() {}
 
@@ -12,27 +13,33 @@ public struct ContentView: View {
             Color(red: 0.1, green: 0.15, blue: 0.3)
                 .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                // Render appropriate view based on session state
-                switch sessionManager.sessionState {
-                case .intro:
-                    IntroView()
-                case .preWorkout:
-                    PreWorkoutView()
-                case .stretching(_):
-                    StretchingView()
-                case .warmup(_):
-                    WarmupView()
-                case .load:
-                    LoadView()
-                case .workingSet:
-                    WorkingSetView()
-                case .rest(_):
-                    RestView()
-                case .review:
-                    ReviewView()
-                case .done:
-                    DoneView()
+            if showingAnalytics {
+                // Analytics View
+                AnalyticsView(isPresented: $showingAnalytics)
+            } else {
+                // Main Session Flow
+                VStack(spacing: 0) {
+                    // Render appropriate view based on session state
+                    switch sessionManager.sessionState {
+                    case .intro:
+                        IntroView(showAnalytics: $showingAnalytics)
+                    case .preWorkout:
+                        PreWorkoutView()
+                    case .stretching(_):
+                        StretchingView()
+                    case .warmup(_):
+                        WarmupView()
+                    case .load:
+                        LoadView()
+                    case .workingSet:
+                        WorkingSetView()
+                    case .rest(_):
+                        RestView()
+                    case .review:
+                        ReviewView()
+                    case .done:
+                        DoneView()
+                    }
                 }
             }
         }
@@ -45,6 +52,7 @@ public struct ContentView: View {
 @MainActor
 struct IntroView: View {
     @Environment(SessionManager.self) private var sessionManager
+    @Binding var showAnalytics: Bool
 
     var body: some View {
         VStack(spacing: 24) {
@@ -70,13 +78,32 @@ struct IntroView: View {
 
             Spacer()
 
-            // Action Bar
-            ActionBar {
-                if let firstPlan = sessionManager.workoutPlans.first {
-                    sessionManager.startSession(workoutPlanId: firstPlan.id)
+            // Dual Action Buttons
+            VStack(spacing: 12) {
+                // Start Session Button
+                ActionBar {
+                    if let firstPlan = sessionManager.workoutPlans.first {
+                        sessionManager.startSession(workoutPlanId: firstPlan.id)
+                    }
+                } label: {
+                    Text("START WORKOUT")
                 }
-            } label: {
-                Text("START SESSION")
+
+                // View Analytics Button
+                Button {
+                    showAnalytics = true
+                } label: {
+                    Text("VIEW ANALYTICS")
+                        .font(.system(.body, design: .monospaced))
+                        .fontWeight(.bold)
+                        .frame(maxWidth: .infinity)
+                        .padding(16)
+                        .background(Color.white.opacity(0.1))
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 24)
             }
         }
         .foregroundColor(.white)
