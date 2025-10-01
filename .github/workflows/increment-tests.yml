@@ -29,9 +29,6 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
-      - name: Download iOS Platform
-        run: xcodebuild -downloadPlatform iOS
-
       - name: List available simulators
         run: xcrun simctl list devices available
 
