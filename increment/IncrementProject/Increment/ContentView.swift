@@ -1,7 +1,8 @@
 import SwiftUI
 
+@MainActor
 struct ContentView: View {
-    @EnvironmentObject var sessionManager: SessionManager
+    @Environment(SessionManager.self) private var sessionManager
 
     var body: some View {
         ZStack {
@@ -39,8 +40,9 @@ struct ContentView: View {
 
 // MARK: - Intro View
 
+@MainActor
 struct IntroView: View {
-    @EnvironmentObject var sessionManager: SessionManager
+    @Environment(SessionManager.self) private var sessionManager
 
     var body: some View {
         VStack(spacing: 24) {
@@ -68,12 +70,8 @@ struct IntroView: View {
 
             // Action Bar
             ActionBar {
-                print("Button tapped! Workout plans count: \(sessionManager.workoutPlans.count)")
                 if let firstPlan = sessionManager.workoutPlans.first {
-                    print("Starting session with plan: \(firstPlan.name)")
                     sessionManager.startSession(workoutPlanId: firstPlan.id)
-                } else {
-                    print("ERROR: No workout plans available!")
                 }
             } label: {
                 Text("START SESSION")
@@ -85,8 +83,9 @@ struct IntroView: View {
 
 // MARK: - Stretching View
 
+@MainActor
 struct StretchingView: View {
-    @EnvironmentObject var sessionManager: SessionManager
+    @Environment(SessionManager.self) private var sessionManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -136,8 +135,9 @@ struct StretchingView: View {
 
 // MARK: - Pre-Workout View
 
+@MainActor
 struct PreWorkoutView: View {
-    @EnvironmentObject var sessionManager: SessionManager
+    @Environment(SessionManager.self) private var sessionManager
     @State private var selectedRating: Int = 3
     @State private var feelingNote: String = ""
     @FocusState private var isTextFieldFocused: Bool
@@ -242,8 +242,9 @@ struct PreWorkoutView: View {
 
 // MARK: - Warmup View
 
+@MainActor
 struct WarmupView: View {
-    @EnvironmentObject var sessionManager: SessionManager
+    @Environment(SessionManager.self) private var sessionManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -255,11 +256,13 @@ struct WarmupView: View {
                     setInfo: "Warmup",
                     goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
                     weight: exerciseLog.startWeight,
-                    plates: profile.plateOptions != nil ? SteelProgressionEngine.computePlateBreakdown(
-                        exerciseLog.startWeight,
-                        plates: profile.plateOptions!,
-                        barWeight: 45.0
-                    ) : nil
+                    plates: profile.plateOptions.map { plateOptions in
+                        SteelProgressionEngine.computePlateBreakdown(
+                            exerciseLog.startWeight,
+                            plates: plateOptions,
+                            barWeight: 45.0
+                        )
+                    }
                 )
             }
 
@@ -293,8 +296,9 @@ struct WarmupView: View {
 
 // MARK: - Load View
 
+@MainActor
 struct LoadView: View {
-    @EnvironmentObject var sessionManager: SessionManager
+    @Environment(SessionManager.self) private var sessionManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -307,11 +311,13 @@ struct LoadView: View {
                     setInfo: "Set 1/\(profile.sets)",
                     goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
                     weight: prescription.weight,
-                    plates: profile.plateOptions != nil ? SteelProgressionEngine.computePlateBreakdown(
-                        prescription.weight,
-                        plates: profile.plateOptions!,
-                        barWeight: 45.0
-                    ) : nil
+                    plates: profile.plateOptions.map { plateOptions in
+                        SteelProgressionEngine.computePlateBreakdown(
+                            prescription.weight,
+                            plates: plateOptions,
+                            barWeight: 45.0
+                        )
+                    }
                 )
             }
 
@@ -354,8 +360,9 @@ struct LoadView: View {
 
 // MARK: - Working Set View
 
+@MainActor
 struct WorkingSetView: View {
-    @EnvironmentObject var sessionManager: SessionManager
+    @Environment(SessionManager.self) private var sessionManager
     @State private var reps: Int = 5
 
     var body: some View {
@@ -369,11 +376,13 @@ struct WorkingSetView: View {
                     setInfo: "Set \(sessionManager.currentSetIndex + 1)/\(profile.sets)",
                     goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
                     weight: prescription.weight,
-                    plates: profile.plateOptions != nil ? SteelProgressionEngine.computePlateBreakdown(
-                        prescription.weight,
-                        plates: profile.plateOptions!,
-                        barWeight: 45.0
-                    ) : nil
+                    plates: profile.plateOptions.map { plateOptions in
+                        SteelProgressionEngine.computePlateBreakdown(
+                            prescription.weight,
+                            plates: plateOptions,
+                            barWeight: 45.0
+                        )
+                    }
                 )
 
                 // Content panel
@@ -440,8 +449,9 @@ struct WorkingSetView: View {
 
 // MARK: - Rest View
 
+@MainActor
 struct RestView: View {
-    @EnvironmentObject var sessionManager: SessionManager
+    @Environment(SessionManager.self) private var sessionManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -520,8 +530,9 @@ struct RestView: View {
 
 // MARK: - Review View
 
+@MainActor
 struct ReviewView: View {
-    @EnvironmentObject var sessionManager: SessionManager
+    @Environment(SessionManager.self) private var sessionManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -584,8 +595,9 @@ struct ReviewView: View {
 
 // MARK: - Done View
 
+@MainActor
 struct DoneView: View {
-    @EnvironmentObject var sessionManager: SessionManager
+    @Environment(SessionManager.self) private var sessionManager
 
     var body: some View {
         VStack(spacing: 24) {

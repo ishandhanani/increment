@@ -1,16 +1,19 @@
 import Foundation
 import Combine
+import Observation
 
 /// Manages the current workout session state
-class SessionManager: ObservableObject {
-    // MARK: - Published State
+@Observable
+@MainActor
+class SessionManager {
+    // MARK: - Observable State
 
-    @Published var currentSession: Session?
-    @Published var currentExerciseIndex: Int = 0
-    @Published var currentSetIndex: Int = 0
-    @Published var sessionState: SessionState = .intro
-    @Published var currentExerciseLog: ExerciseSessionLog?
-    @Published var nextPrescription: (reps: Int, weight: Double)?
+    var currentSession: Session?
+    var currentExerciseIndex: Int = 0
+    var currentSetIndex: Int = 0
+    var sessionState: SessionState = .intro
+    var currentExerciseLog: ExerciseSessionLog?
+    var nextPrescription: (reps: Int, weight: Double)?
 
     // MARK: - Data
 
