@@ -16,6 +16,12 @@ import Foundation
 @Suite("PersistenceManager Tests")
 struct PersistenceManagerTests {
 
+    init() async {
+        // Clear all UserDefaults before ANY tests in this suite run
+        // This ensures we start with a clean slate
+        await PersistenceManager.shared.clearAll()
+    }
+
     /// Test saving and loading complete session data
     /// Critical: Sessions contain all workout history - data loss here is catastrophic
     @Test("PersistenceManager: Saves and loads sessions")
