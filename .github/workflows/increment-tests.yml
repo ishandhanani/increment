@@ -43,13 +43,13 @@ jobs:
             -enableCodeCoverage YES \
             | xcpretty --color --report html --output test-results.html
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Publish test results summary
+        uses: kishikawakatsumi/xcresulttool@v1
         with:
-          name: test-results
-          path: increment/IncrementProject/test-results.html
-          retention-days: 30
+          path: increment/IncrementProject/TestResults.xcresult
+          show-passed-tests: true
+          show-code-coverage: true
+        if: success() || failure()
 
       - name: Upload xcresult bundle
         if: always()
@@ -58,21 +58,3 @@ jobs:
           name: xcresult-bundle
           path: increment/IncrementProject/TestResults.xcresult
           retention-days: 30
-
-      - name: Check test results
-        if: always()
-        working-directory: increment/IncrementProject
-        run: |
-          if [ -d "TestResults.xcresult" ]; then
-            xcrun xcresulttool get --legacy --format json --path TestResults.xcresult > test-summary.json
-            echo "Test results saved to test-summary.json"
-
-            # Check for test failures
-            FAILED_TESTS=$(xcrun xcresulttool get --legacy --format json --path TestResults.xcresult | jq '.issues.testFailureSummaries | length')
-            if [ "$FAILED_TESTS" -gt 0 ]; then
-              echo "❌ $FAILED_TESTS test(s) failed"
-              exit 1
-            else
-              echo "✅ All tests passed"
-            fi
-          fi
