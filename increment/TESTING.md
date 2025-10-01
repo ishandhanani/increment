@@ -11,7 +11,7 @@ We follow the AMANALAP principle for test coverage:
 - **Necessary**: Focus on tests that catch real bugs, not boilerplate
 - **Late**: Expand test coverage as APIs stabilize, not before
 
-**Current Status**: 15 essential tests covering core workflows
+**Current Status**: 18 essential tests covering core workflows
 **Future**: Expand to 50-75 tests post-beta as features mature
 
 ---
@@ -96,16 +96,20 @@ IncrementProject/
 
 ## Test Execution Methods
 
+**Important**: We have **ONE set of tests** (18 tests in 4 files under `IncrementPackage/Tests/`), not two separate test suites. These same tests can be executed using different methods:
+
 ### 1. Swift Package Manager (Local Development)
 ```bash
 cd increment/IncrementProject/IncrementPackage
 swift test
 ```
-- **Fast**: ~5-10 seconds for all tests
-- **Lightweight**: No simulator needed
-- **Best for**: Quick iteration during development
+- **Speed**: ~8ms for all 18 tests
+- **Platform**: Runs directly on macOS host (no simulator)
+- **What it tests**: Package code in `IncrementFeature` target
+- **Best for**: Rapid local development iteration
+- **Limitation**: Doesn't validate full iOS app integration
 
-### 2. Xcode (Full Integration)
+### 2. Xcode Workspace (CI/CD + Integration)
 ```bash
 cd increment/IncrementProject
 xcodebuild test \
@@ -113,20 +117,45 @@ xcodebuild test \
   -scheme Increment \
   -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
-- **Complete**: Tests full app integration
-- **CI/CD**: Used in GitHub Actions
-- **Best for**: Pre-commit verification, CI pipeline
+- **Speed**: ~30 seconds (includes simulator boot)
+- **Platform**: iOS Simulator (actual iOS environment)
+- **What it tests**: Same package tests, but through the iOS app target
+- **Best for**: CI/CD pipeline, pre-deployment validation
+- **Advantage**: Tests the code exactly as users will run it
 
-### 3. Xcode IDE (Interactive)
+### 3. Xcode IDE (Interactive Debugging)
 - Product → Test (⌘U)
 - Test Navigator for granular control
-- **Best for**: Debugging test failures, UI testing
+- **Best for**: Debugging test failures, step-through execution
+
+### Which Method to Use?
+
+| Scenario | Method | Why |
+|----------|--------|-----|
+| Writing new tests | SPM (`swift test`) | Instant feedback (<1s) |
+| Pre-commit check | Xcode workspace | Validates full integration |
+| CI/CD pipeline | Xcode workspace | Tests deployment scenario |
+| Debugging failures | Xcode IDE | Breakpoints + visual tools |
+
+### Migration Impact (Post-October 2025)
+
+**Before migration**:
+- SPM tested package code (models, logic)
+- Xcode tested iOS app with duplicated files
+- These were effectively different codebases
+
+**After migration**:
+- iOS app imports `IncrementFeature` package (no duplication)
+- Both methods now test the **exact same code**
+- SPM tests package directly, Xcode tests package through iOS app wrapper
+
+**CI Strategy**: We run only Xcode workspace tests in CI because they validate the full deployment path that users experience. SPM tests are available for developers who want faster local iteration.
 
 ---
 
 ## Test Coverage
 
-### Current Coverage (15 Essential Tests)
+### Current Coverage (18 Essential Tests)
 
 #### 1. SteelProgressionEngine (8 tests) - **Core Algorithm**
 - ✅ FAIL rating decreases weight
@@ -153,9 +182,12 @@ xcodebuild test \
 
 **Why these matter**: If persistence breaks, users lose all data.
 
-#### 4. SessionManager (2 tests) - **Integration**
+#### 4. SessionManager (5 tests) - **Integration**
 - ✅ Pre-workout → first set flow
 - ✅ Complete workout end-to-end
+- ✅ Set rating flow
+- ✅ Bad-day rating flow
+- ✅ Skip exercise flow
 
 **Why these matter**: Ensures the full user journey works.
 
