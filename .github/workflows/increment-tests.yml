@@ -29,6 +29,14 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Cache derived data
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-xcode-${{ hashFiles('increment/**/*.swift', 'increment/**/*.xcodeproj/**', 'increment/**/*.xcworkspace/**') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-
+
       - name: Initialize simulator service
         run: xcrun simctl list > /dev/null
 
