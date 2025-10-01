@@ -13,7 +13,7 @@ import Foundation
  * when the app closes or device restarts.
  */
 
-@Suite("PersistenceManager Tests")
+@Suite("PersistenceManager Tests", .serialized)
 struct PersistenceManagerTests {
 
     init() async {
