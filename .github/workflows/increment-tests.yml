@@ -29,18 +29,11 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
-      - name: Show available SDKs
-        run: xcodebuild -showsdks
+      - name: Download iOS Platform
+        run: xcodebuild -downloadPlatform iOS
 
       - name: List available simulators
         run: xcrun simctl list devices available
-
-      - name: Get iPhone 16 simulator ID
-        id: sim
-        run: |
-          SIM_ID=$(xcrun simctl list devices available | grep -A20 "iOS 18.4" | grep "iPhone 16 (" | head -1 | sed 's/.*(\([A-F0-9-]*\)) .*/\1/')
-          echo "uuid=$SIM_ID" >> $GITHUB_OUTPUT
-          echo "Using simulator: $SIM_ID"
 
       - name: Run tests on iOS Simulator
         working-directory: increment/IncrementProject
@@ -48,8 +41,7 @@ jobs:
           xcodebuild test \
             -workspace Increment.xcworkspace \
             -scheme Increment \
-            -sdk iphonesimulator \
-            -destination "platform=iOS Simulator,id=${{steps.sim.outputs.uuid}}" \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.4' \
             -resultBundlePath TestResults.xcresult \
             -enableCodeCoverage YES \
             | xcpretty --color --report html --output test-results.html
