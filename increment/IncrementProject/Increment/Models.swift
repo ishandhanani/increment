@@ -146,12 +146,25 @@ struct ExerciseSessionLog: Codable, Identifiable {
     }
 }
 
+// MARK: - PreWorkoutFeeling
+
+struct PreWorkoutFeeling: Codable {
+    let rating: Int  // 1-5
+    let note: String?  // Optional text description
+
+    init(rating: Int, note: String? = nil) {
+        self.rating = rating
+        self.note = note
+    }
+}
+
 // MARK: - Session
 
 struct Session: Codable, Identifiable {
     let id: UUID
     let date: Date
     let workoutPlanId: UUID
+    var preWorkoutFeeling: PreWorkoutFeeling?
     var exerciseLogs: [ExerciseSessionLog]
     var stats: SessionStats
     var synced: Bool
@@ -160,6 +173,7 @@ struct Session: Codable, Identifiable {
         id: UUID = UUID(),
         date: Date = Date(),
         workoutPlanId: UUID,
+        preWorkoutFeeling: PreWorkoutFeeling? = nil,
         exerciseLogs: [ExerciseSessionLog] = [],
         stats: SessionStats = SessionStats(totalVolume: 0),
         synced: Bool = false
@@ -167,6 +181,7 @@ struct Session: Codable, Identifiable {
         self.id = id
         self.date = date
         self.workoutPlanId = workoutPlanId
+        self.preWorkoutFeeling = preWorkoutFeeling
         self.exerciseLogs = exerciseLogs
         self.stats = stats
         self.synced = synced

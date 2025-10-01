@@ -26,6 +26,7 @@ class SessionManager: ObservableObject {
 
     enum SessionState {
         case intro
+        case preWorkout
         case warmup(step: Int)  // 0 = 50%×5, 1 = 70%×3
         case load
         case workingSet
@@ -51,10 +52,18 @@ class SessionManager: ObservableObject {
         currentExerciseIndex = 0
         currentSetIndex = 0
 
-        // Start first exercise
-        if let firstExerciseId = plan.order.first {
-            startExercise(exerciseId: firstExerciseId)
-        }
+        // Show pre-workout feeling screen
+        sessionState = .preWorkout
+    }
+
+    func logPreWorkoutFeeling(_ feeling: PreWorkoutFeeling) {
+        currentSession?.preWorkoutFeeling = feeling
+
+        // Start first exercise after logging feeling
+        guard let plan = workoutPlans.first(where: { $0.id == currentSession?.workoutPlanId ?? UUID() }),
+              let firstExerciseId = plan.order.first else { return }
+
+        startExercise(exerciseId: firstExerciseId)
     }
 
     func startExercise(exerciseId: UUID) {
