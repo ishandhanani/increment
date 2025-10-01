@@ -359,8 +359,30 @@ class SessionManager {
     }
 
     private func getRecentLoads(exerciseId: UUID) -> [Double] {
-        // TODO: Query last 7 days of sessions for this exercise
-        return []
+        // Get all sessions from persistence
+        let allSessions = PersistenceManager.shared.loadSessions()
+
+        // Calculate date 7 days ago
+        let calendar = Calendar.current
+        guard let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: Date()) else {
+            return []
+        }
+
+        // Filter sessions from last 7 days
+        let recentSessions = allSessions.filter { session in
+            session.date >= sevenDaysAgo
+        }
+
+        // Extract start weights for the specific exercise
+        let startWeights = recentSessions.compactMap { session -> Double? in
+            // Find exercise log for this exercise in the session
+            guard let exerciseLog = session.exerciseLogs.first(where: { $0.exerciseId == exerciseId }) else {
+                return nil
+            }
+            return exerciseLog.startWeight
+        }
+
+        return startWeights
     }
 
     private func updateExerciseState(exerciseId: UUID, startLoad: Double, decision: SessionDecision) {
