@@ -38,7 +38,7 @@ jobs:
           xcodebuild test \
             -workspace Increment.xcworkspace \
             -scheme Increment \
-            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.4' \
             -resultBundlePath TestResults.xcresult \
             -enableCodeCoverage YES \
             | xcpretty --color --report html --output test-results.html
