@@ -39,6 +39,17 @@
       </TestPlans>
       <Testables>
          <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "IncrementFeatureTests"
+               BuildableName = "IncrementFeatureTests"
+               BlueprintName = "IncrementFeatureTests"
+               ReferencedContainer = "container:IncrementPackage">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"

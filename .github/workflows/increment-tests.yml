@@ -37,7 +37,7 @@ jobs:
         run: |
           xcodebuild test \
             -workspace Increment.xcworkspace \
-            -scheme IncrementFeature \
+            -scheme Increment \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -resultBundlePath TestResults.xcresult \
             -enableCodeCoverage YES \
