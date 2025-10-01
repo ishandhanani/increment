@@ -1,4 +1,5 @@
 import SwiftUI
+import IncrementFeature
 
 @main
 struct IncrementApp: App {

@@ -1,4 +1,5 @@
 import SwiftUI
+import IncrementFeature
 
 struct DecisionBadge: View {
     let decision: SessionDecision

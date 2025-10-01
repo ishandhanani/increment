@@ -8,19 +8,19 @@ import Observation
 public class SessionManager {
     // MARK: - Observable State
 
-    var currentSession: Session?
-    var currentExerciseIndex: Int = 0
-    var currentSetIndex: Int = 0
-    var sessionState: SessionState = .intro
-    var currentExerciseLog: ExerciseSessionLog?
-    var nextPrescription: (reps: Int, weight: Double)?
-    var isFirstExercise: Bool = true
+    public var currentSession: Session?
+    public var currentExerciseIndex: Int = 0
+    public var currentSetIndex: Int = 0
+    public var sessionState: SessionState = .intro
+    public var currentExerciseLog: ExerciseSessionLog?
+    public var nextPrescription: (reps: Int, weight: Double)?
+    public var isFirstExercise: Bool = true
 
     // MARK: - Data
 
-    var workoutPlans: [WorkoutPlan] = []
-    var exerciseProfiles: [UUID: ExerciseProfile] = [:]
-    var exerciseStates: [UUID: ExerciseState] = [:]
+    public var workoutPlans: [WorkoutPlan] = []
+    public var exerciseProfiles: [UUID: ExerciseProfile] = [:]
+    public var exerciseStates: [UUID: ExerciseState] = [:]
 
     // Timer management
     private var restTimer: RestTimer?
@@ -28,7 +28,7 @@ public class SessionManager {
 
     // MARK: - Session State
 
-    enum SessionState: Equatable {
+    public enum SessionState: Equatable {
         case intro
         case preWorkout
         case stretching(timeRemaining: Int)  // 5-minute stretching countdown
@@ -50,7 +50,7 @@ public class SessionManager {
 
     // MARK: - Session Control
 
-    func startSession(workoutPlanId: UUID) {
+    public func startSession(workoutPlanId: UUID) {
         guard let plan = workoutPlans.first(where: { $0.id == workoutPlanId }) else { return }
 
         currentSession = Session(workoutPlanId: plan.id)
@@ -62,7 +62,7 @@ public class SessionManager {
         sessionState = .preWorkout
     }
 
-    func logPreWorkoutFeeling(_ feeling: PreWorkoutFeeling) {
+    public func logPreWorkoutFeeling(_ feeling: PreWorkoutFeeling) {
         currentSession?.preWorkoutFeeling = feeling
 
         // Start stretching phase (5 minutes = 300 seconds)
@@ -71,7 +71,7 @@ public class SessionManager {
 
     // MARK: - Stretching Phase
 
-    func startStretchingPhase() {
+    public func startStretchingPhase() {
         let stretchDuration = 300  // 5 minutes
 
         // Create new timer
@@ -92,7 +92,7 @@ public class SessionManager {
             .store(in: &cancellables)
     }
 
-    func skipStretching() {
+    public func skipStretching() {
         // Stop the stretching timer
         restTimer?.stop()
         restTimer = nil
@@ -104,7 +104,7 @@ public class SessionManager {
         startExercise(exerciseId: firstExerciseId)
     }
 
-    func finishStretching() {
+    public func finishStretching() {
         // Stop the stretching timer
         restTimer?.stop()
         restTimer = nil
@@ -116,7 +116,7 @@ public class SessionManager {
         startExercise(exerciseId: firstExerciseId)
     }
 
-    func startExercise(exerciseId: UUID) {
+    public func startExercise(exerciseId: UUID) {
         guard exerciseProfiles[exerciseId] != nil else { return }
 
         // Get starting weight from state or use default
@@ -142,7 +142,7 @@ public class SessionManager {
 
     // MARK: - Warmup Flow
 
-    func advanceWarmup() {
+    public func advanceWarmup() {
         guard case .warmup(let step) = sessionState else { return }
         guard let exerciseLog = currentExerciseLog,
               exerciseProfiles[exerciseLog.exerciseId] != nil else { return }
@@ -157,7 +157,7 @@ public class SessionManager {
         }
     }
 
-    func getWarmupPrescription() -> (weight: Double, reps: Int)? {
+    public func getWarmupPrescription() -> (weight: Double, reps: Int)? {
         guard case .warmup(let step) = sessionState else { return nil }
         guard let exerciseLog = currentExerciseLog else { return nil }
 
@@ -175,13 +175,13 @@ public class SessionManager {
 
     // MARK: - Load Flow
 
-    func acknowledgeLoad() {
+    public func acknowledgeLoad() {
         sessionState = .workingSet
     }
 
     // MARK: - Working Set Flow
 
-    func logSet(reps: Int, rating: Rating) {
+    public func logSet(reps: Int, rating: Rating) {
         guard let exerciseLog = currentExerciseLog,
               let profile = exerciseProfiles[exerciseLog.exerciseId] else { return }
 
@@ -223,7 +223,7 @@ public class SessionManager {
         startRestTimer(duration: profile.defaultRestSec)
     }
 
-    func advanceToNextSet() {
+    public func advanceToNextSet() {
         // Stop the rest timer
         restTimer?.stop()
         restTimer = nil
@@ -259,13 +259,13 @@ public class SessionManager {
             .store(in: &cancellables)
     }
 
-    func adjustRestTime(by seconds: Int) {
+    public func adjustRestTime(by seconds: Int) {
         restTimer?.adjustTime(by: seconds)
     }
 
     // MARK: - Exercise Completion
 
-    func finishExercise() {
+    public func finishExercise() {
         guard var exerciseLog = currentExerciseLog,
               let profile = exerciseProfiles[exerciseLog.exerciseId] else { return }
 
@@ -306,7 +306,7 @@ public class SessionManager {
         sessionState = .review
     }
 
-    func advanceToNextExercise() {
+    public func advanceToNextExercise() {
         guard let session = currentSession,
               let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }) else { return }
 
@@ -322,7 +322,7 @@ public class SessionManager {
 
     // MARK: - Session Completion
 
-    func finishSession() {
+    public func finishSession() {
         guard var session = currentSession else { return }
 
         // Calculate stats
