@@ -7,7 +7,6 @@ import Charts
 public struct AnalyticsView: View {
     @Environment(SessionManager.self) private var sessionManager
     @Binding var isPresented: Bool
-    @State private var selectedTab: AnalyticsTab = .overview
 
     public init(isPresented: Binding<Bool>) {
         self._isPresented = isPresented
@@ -15,7 +14,7 @@ public struct AnalyticsView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // Header with back button
+            // Header with back button - matches ExerciseHeader pattern
             HStack {
                 Button {
                     isPresented = false
@@ -35,44 +34,33 @@ public struct AnalyticsView: View {
                     .font(.system(.title3, design: .monospaced))
                     .fontWeight(.bold)
                     .foregroundColor(.white)
-
-                Spacer()
-
-                // Spacer for symmetry
-                Color.clear
-                    .frame(width: 60)
             }
-            .padding(24)
-            .background(Color.white.opacity(0.05))
+            .foregroundColor(.white)
+            .padding(16)
+            .background(Color.black.opacity(0.3))
 
-            // Content based on selected tab
-            switch selectedTab {
-            case .overview:
-                OverviewDashboardView()
-            case .exercises:
-                ExerciseProgressView()
+            // Analytics content
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // Quick Stats Grid
+                    QuickStatsGrid(stats: sessionManager.overviewStats)
+
+                    // Recent Trend Chart
+                    if !sessionManager.overviewStats.recentTrend.isEmpty {
+                        RecentTrendChart(trend: sessionManager.overviewStats.recentTrend)
+                    }
+
+                    // Insights Section
+                    if !sessionManager.performanceInsights.isEmpty {
+                        InsightsSection(insights: sessionManager.performanceInsights)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .padding(24)
             }
 
             Spacer()
-
-            // Tab selector
-            HStack(spacing: 0) {
-                TabButton(
-                    title: "Overview",
-                    isSelected: selectedTab == .overview,
-                    action: { selectedTab = .overview }
-                )
-
-                TabButton(
-                    title: "Exercises",
-                    isSelected: selectedTab == .exercises,
-                    action: { selectedTab = .exercises }
-                )
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
         }
-        .background(Color(red: 0.1, green: 0.15, blue: 0.3))
     }
 }
 
@@ -118,7 +106,7 @@ struct OverviewDashboardView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(alignment: .leading, spacing: 24) {
                 // Quick Stats Grid
                 QuickStatsGrid(stats: sessionManager.overviewStats)
 
@@ -132,6 +120,7 @@ struct OverviewDashboardView: View {
                     InsightsSection(insights: sessionManager.performanceInsights)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(24)
         }
     }
@@ -347,3 +336,4 @@ struct InsightCard: View {
         }
     }
 }
+

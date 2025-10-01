@@ -10,7 +10,7 @@ struct ExerciseProgressView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(alignment: .leading, spacing: 24) {
                 // Exercise Selector
                 if !sessionManager.exercisesPerformed.isEmpty {
                     ExerciseSelector(
@@ -35,6 +35,7 @@ struct ExerciseProgressView: View {
                     NoDataMessage()
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(24)
         }
         .onAppear {
