@@ -22,8 +22,10 @@ struct PersistenceManagerTests {
     func testSaveLoadSessions() async {
         // Arrange
         let manager = await PersistenceManager.shared
+        // Clear before test to ensure isolation
         await manager.clearAll()
 
+        let sessionId = UUID()
         let workoutPlanId = UUID()
         let exerciseId = UUID()
 
@@ -43,19 +45,20 @@ struct PersistenceManagerTests {
         )
 
         let session = Session(
+            id: sessionId,
             workoutPlanId: workoutPlanId,
             preWorkoutFeeling: PreWorkoutFeeling(rating: 4),
             exerciseLogs: [exerciseLog],
             stats: SessionStats(totalVolume: 800.0)
         )
 
-        // Act
+        // Act - Save ONLY this session (replaces all)
         await manager.saveSessions([session])
         let loaded = await manager.loadSessions()
 
         // Assert
-        #expect(loaded.count == 1)
-        #expect(loaded[0].id == session.id)
+        #expect(loaded.count == 1, "Should have exactly one session after save")
+        #expect(loaded[0].id == sessionId)
         #expect(loaded[0].workoutPlanId == workoutPlanId)
         #expect(loaded[0].exerciseLogs.count == 1)
         #expect(loaded[0].exerciseLogs[0].setLogs.count == 1)
@@ -71,6 +74,7 @@ struct PersistenceManagerTests {
     func testSaveLoadExerciseStates() async {
         // Arrange
         let manager = await PersistenceManager.shared
+        // Clear before test to ensure isolation
         await manager.clearAll()
 
         let exerciseId1 = UUID()
@@ -95,12 +99,12 @@ struct PersistenceManagerTests {
             exerciseId2: state2
         ]
 
-        // Act
+        // Act - Save ONLY these states (replaces all)
         await manager.saveExerciseStates(states)
         let loaded = await manager.loadExerciseStates()
 
         // Assert
-        #expect(loaded.count == 2)
+        #expect(loaded.count == 2, "Should have exactly two exercise states after save")
         #expect(loaded[exerciseId1]?.lastStartLoad == 105.0)
         #expect(loaded[exerciseId1]?.lastDecision == .up_1)
         #expect(loaded[exerciseId2]?.lastStartLoad == 225.0)

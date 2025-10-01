@@ -204,6 +204,7 @@ class PersistenceManager {
         userDefaults.removeObject(forKey: Keys.exerciseProfiles)
         userDefaults.removeObject(forKey: Keys.workoutPlans)
         userDefaults.removeObject(forKey: Keys.currentSession)
+        userDefaults.synchronize() // Force write to disk
     }
 
     func exportData() -> [String: Any] {
