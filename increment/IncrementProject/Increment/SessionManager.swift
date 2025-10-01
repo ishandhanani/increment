@@ -27,6 +27,7 @@ class SessionManager: ObservableObject {
     enum SessionState {
         case intro
         case preWorkout
+        case stretching(timeRemaining: Int)  // 5-minute stretching countdown
         case warmup(step: Int)  // 0 = 50%×5, 1 = 70%×3
         case load
         case workingSet
@@ -59,7 +60,51 @@ class SessionManager: ObservableObject {
     func logPreWorkoutFeeling(_ feeling: PreWorkoutFeeling) {
         currentSession?.preWorkoutFeeling = feeling
 
-        // Start first exercise after logging feeling
+        // Start stretching phase (5 minutes = 300 seconds)
+        startStretchingPhase()
+    }
+
+    // MARK: - Stretching Phase
+
+    func startStretchingPhase() {
+        let stretchDuration = 300  // 5 minutes
+
+        // Create new timer
+        let timer = RestTimer()
+        restTimer = timer
+
+        // Start timer
+        timer.start(duration: stretchDuration)
+
+        // Initial state
+        sessionState = .stretching(timeRemaining: stretchDuration)
+
+        // Observe timer updates
+        timer.$timeRemaining
+            .sink { [weak self] remaining in
+                self?.sessionState = .stretching(timeRemaining: remaining)
+            }
+            .store(in: &cancellables)
+    }
+
+    func skipStretching() {
+        // Stop the stretching timer
+        restTimer?.stop()
+        restTimer = nil
+
+        // Start first exercise
+        guard let plan = workoutPlans.first(where: { $0.id == currentSession?.workoutPlanId ?? UUID() }),
+              let firstExerciseId = plan.order.first else { return }
+
+        startExercise(exerciseId: firstExerciseId)
+    }
+
+    func finishStretching() {
+        // Stop the stretching timer
+        restTimer?.stop()
+        restTimer = nil
+
+        // Start first exercise
         guard let plan = workoutPlans.first(where: { $0.id == currentSession?.workoutPlanId ?? UUID() }),
               let firstExerciseId = plan.order.first else { return }
 

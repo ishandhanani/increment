@@ -16,6 +16,8 @@ struct ContentView: View {
                     IntroView()
                 case .preWorkout:
                     PreWorkoutView()
+                case .stretching(_):
+                    StretchingView()
                 case .warmup(_):
                     WarmupView()
                 case .load:
@@ -78,6 +80,57 @@ struct IntroView: View {
             }
         }
         .foregroundColor(.white)
+    }
+}
+
+// MARK: - Stretching View
+
+struct StretchingView: View {
+    @EnvironmentObject var sessionManager: SessionManager
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            if case .stretching(let timeRemaining) = sessionManager.sessionState {
+                VStack(spacing: 24) {
+                    // Header
+                    Text("Stretching")
+                        .font(.system(.title2, design: .monospaced))
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+
+                    // Timer
+                    VStack(spacing: 8) {
+                        Text(formatTime(timeRemaining))
+                            .font(.system(.largeTitle, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+
+                        Text("Prepare for workout")
+                            .font(.system(.body, design: .monospaced))
+                            .opacity(0.7)
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(24)
+            }
+
+            Spacer()
+
+            // Action Bar
+            ActionBar {
+                sessionManager.finishStretching()
+            } label: {
+                Text("START WORKOUT →")
+            }
+        }
+    }
+
+    private func formatTime(_ seconds: Int) -> String {
+        let mins = seconds / 60
+        let secs = seconds % 60
+        return String(format: "%02d:%02d", mins, secs)
     }
 }
 
