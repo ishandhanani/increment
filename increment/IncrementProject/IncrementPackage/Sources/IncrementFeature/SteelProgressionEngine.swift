@@ -2,17 +2,17 @@ import Foundation
 
 /// S.T.E.E.L.™ Progression Engine
 /// Set-to-set Tuning + End-of-exercise Escalation/Lowering
-class SteelProgressionEngine {
+public class SteelProgressionEngine {
 
     // MARK: - Within-Session Micro-Adjust (4B)
 
-    struct MicroAdjustResult {
-        let nextWeight: Double
-        let nextReps: Int
+    public struct MicroAdjustResult {
+        public let nextWeight: Double
+        public let nextReps: Int
     }
 
     /// Computes next set prescription based on current performance
-    static func microAdjust(
+    public static func microAdjust(
         currentWeight: Double,
         achievedReps: Int,
         repRange: ClosedRange<Int>,
@@ -61,14 +61,14 @@ class SteelProgressionEngine {
     }
 
     /// Bad-Day Switch: Check if first two working sets are red
-    static func shouldActivateBadDaySwitch(setLogs: [SetLog]) -> Bool {
+    public static func shouldActivateBadDaySwitch(setLogs: [SetLog]) -> Bool {
         guard setLogs.count >= 2 else { return false }
         let firstTwo = Array(setLogs.prefix(2))
         return firstTwo.allSatisfy { $0.rating == .fail || $0.rating == .holyShit }
     }
 
     /// Apply bad-day adjustment (drop by base increment, target min reps)
-    static func applyBadDayAdjustment(
+    public static func applyBadDayAdjustment(
         currentWeight: Double,
         baseIncrement: Double,
         rounding: Double,
@@ -81,7 +81,7 @@ class SteelProgressionEngine {
     // MARK: - End-of-Exercise Decision (4C)
 
     /// Computes session decision based on all set logs
-    static func computeDecision(
+    public static func computeDecision(
         setLogs: [SetLog],
         repRange: ClosedRange<Int>,
         totalSets: Int
@@ -112,13 +112,13 @@ class SteelProgressionEngine {
 
     // MARK: - Next-Session Start Weight (4D)
 
-    struct NextSessionResult {
-        let startWeight: Double
-        let reason: String
+    public struct NextSessionResult {
+        public let startWeight: Double
+        public let reason: String
     }
 
     /// Computes next session's start weight with rounding, weekly cap, and plate math
-    static func computeNextSessionWeight(
+    public static func computeNextSessionWeight(
         lastStartLoad: Double,
         decision: SessionDecision,
         baseIncrement: Double,
@@ -170,7 +170,7 @@ class SteelProgressionEngine {
     // MARK: - Plate Math
 
     /// Rounds weight to achievable value with available plates
-    static func roundToPlates(_ targetWeight: Double, plates: [Double], barWeight: Double) -> Double {
+    public static func roundToPlates(_ targetWeight: Double, plates: [Double], barWeight: Double) -> Double {
         let perSide = (targetWeight - barWeight) / 2.0
         guard perSide > 0 else { return barWeight }
 
@@ -190,7 +190,7 @@ class SteelProgressionEngine {
     }
 
     /// Computes per-side plate breakdown
-    static func computePlateBreakdown(_ targetWeight: Double, plates: [Double], barWeight: Double) -> [Double] {
+    public static func computePlateBreakdown(_ targetWeight: Double, plates: [Double], barWeight: Double) -> [Double] {
         let perSide = (targetWeight - barWeight) / 2.0
         guard perSide > 0 else { return [] }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import IncrementFeature
 
 // MARK: - Load View
 

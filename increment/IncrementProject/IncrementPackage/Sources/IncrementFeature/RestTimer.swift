@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 /// Background-resilient rest timer using monotonic clock
-class RestTimer: ObservableObject {
+public class RestTimer: ObservableObject {
     @Published var timeRemaining: Int = 0
     @Published var isRunning: Bool = false
 
@@ -13,7 +13,7 @@ class RestTimer: ObservableObject {
 
     // MARK: - Timer Control
 
-    func start(duration: Int) {
+    public func start(duration: Int) {
         targetDuration = duration
         timeRemaining = duration
         startTime = CFAbsoluteTimeGetCurrent()
@@ -22,14 +22,14 @@ class RestTimer: ObservableObject {
         startMonotonicTimer()
     }
 
-    func pause() {
+    public func pause() {
         isRunning = false
         pausedTimeRemaining = timeRemaining
         timer?.cancel()
         timer = nil
     }
 
-    func resume() {
+    public func resume() {
         guard !isRunning else { return }
 
         targetDuration = pausedTimeRemaining
@@ -40,7 +40,7 @@ class RestTimer: ObservableObject {
         startMonotonicTimer()
     }
 
-    func stop() {
+    public func stop() {
         isRunning = false
         timer?.cancel()
         timer = nil
@@ -48,7 +48,7 @@ class RestTimer: ObservableObject {
         startTime = nil
     }
 
-    func adjustTime(by seconds: Int) {
+    public func adjustTime(by seconds: Int) {
         guard isRunning, let start = startTime else {
             // If paused, adjust paused time
             pausedTimeRemaining = max(0, pausedTimeRemaining + seconds)
@@ -98,12 +98,12 @@ class RestTimer: ObservableObject {
 
     // MARK: - Background Handling
 
-    func applicationDidEnterBackground() {
+    public func applicationDidEnterBackground() {
         // Timer continues running; CFAbsoluteTime is monotonic
         // No special action needed
     }
 
-    func applicationWillEnterForeground() {
+    public func applicationWillEnterForeground() {
         // Timer will automatically resume with correct time
         // The monotonic clock ensures accuracy
         if isRunning {

@@ -2,27 +2,27 @@ import Foundation
 
 // MARK: - Enums
 
-enum ExerciseCategory: String, Codable {
+public enum ExerciseCategory: String, Codable, Sendable {
     case barbell
     case dumbbell
     case machine
     case bodyweight
 }
 
-enum ExercisePriority: String, Codable {
+public enum ExercisePriority: String, Codable, Sendable {
     case upper
     case lower
     case accessory
 }
 
-enum Rating: String, Codable, CaseIterable {
+public enum Rating: String, Codable, Sendable, CaseIterable {
     case fail = "FAIL"
     case holyShit = "HOLY_SHIT"
     case hard = "HARD"
     case easy = "EASY"
 }
 
-enum SessionDecision: String, Codable {
+public enum SessionDecision: String, Codable, Sendable {
     case up_2
     case up_1
     case hold
@@ -31,22 +31,22 @@ enum SessionDecision: String, Codable {
 
 // MARK: - ExerciseProfile
 
-struct ExerciseProfile: Codable, Identifiable {
-    let id: UUID
-    let name: String
-    let category: ExerciseCategory
-    let priority: ExercisePriority
-    let repRange: ClosedRange<Int>
-    let sets: Int
-    let baseIncrement: Double  // Total load step
-    let rounding: Double
-    let microAdjustStep: Double?
-    let weeklyCapPct: Double  // 5-10%
-    let plateOptions: [Double]?  // Per-side plates for barbells
-    let warmupRule: String  // "ramped_2" for 50%×5 → 70%×3
-    let defaultRestSec: Int
+public struct ExerciseProfile: Codable, Identifiable, Sendable {
+    public let id: UUID
+    public let name: String
+    public let category: ExerciseCategory
+    public let priority: ExercisePriority
+    public let repRange: ClosedRange<Int>
+    public let sets: Int
+    public let baseIncrement: Double  // Total load step
+    public let rounding: Double
+    public let microAdjustStep: Double?
+    public let weeklyCapPct: Double  // 5-10%
+    public let plateOptions: [Double]?  // Per-side plates for barbells
+    public let warmupRule: String  // "ramped_2" for 50%×5 → 70%×3
+    public let defaultRestSec: Int
 
-    init(
+    public init(
         id: UUID = UUID(),
         name: String,
         category: ExerciseCategory,
@@ -79,26 +79,26 @@ struct ExerciseProfile: Codable, Identifiable {
 
 // MARK: - ExerciseState
 
-struct ExerciseState: Codable {
-    let exerciseId: UUID
-    var lastStartLoad: Double
-    var lastDecision: SessionDecision?
-    var lastUpdatedAt: Date
+public struct ExerciseState: Codable, Sendable {
+    public let exerciseId: UUID
+    public var lastStartLoad: Double
+    public var lastDecision: SessionDecision?
+    public var lastUpdatedAt: Date
 }
 
 // MARK: - SetLog
 
-struct SetLog: Codable, Identifiable {
-    let id: UUID
-    let setIndex: Int
-    let targetReps: Int
-    let targetWeight: Double
-    var achievedReps: Int
-    var rating: Rating
-    let actualWeight: Double
-    var restPlannedSec: Int?
+public struct SetLog: Codable, Identifiable, Sendable {
+    public let id: UUID
+    public let setIndex: Int
+    public let targetReps: Int
+    public let targetWeight: Double
+    public var achievedReps: Int
+    public var rating: Rating
+    public let actualWeight: Double
+    public var restPlannedSec: Int?
 
-    init(
+    public init(
         id: UUID = UUID(),
         setIndex: Int,
         targetReps: Int,
@@ -121,15 +121,15 @@ struct SetLog: Codable, Identifiable {
 
 // MARK: - ExerciseSessionLog
 
-struct ExerciseSessionLog: Codable, Identifiable {
-    let id: UUID
-    let exerciseId: UUID
-    let startWeight: Double
-    var setLogs: [SetLog]
-    var sessionDecision: SessionDecision?
-    var nextStartWeight: Double?
+public struct ExerciseSessionLog: Codable, Identifiable, Sendable {
+    public let id: UUID
+    public let exerciseId: UUID
+    public let startWeight: Double
+    public var setLogs: [SetLog]
+    public var sessionDecision: SessionDecision?
+    public var nextStartWeight: Double?
 
-    init(
+    public init(
         id: UUID = UUID(),
         exerciseId: UUID,
         startWeight: Double,
@@ -148,11 +148,11 @@ struct ExerciseSessionLog: Codable, Identifiable {
 
 // MARK: - PreWorkoutFeeling
 
-struct PreWorkoutFeeling: Codable {
-    let rating: Int  // 1-5
-    let note: String?  // Optional text description
+public struct PreWorkoutFeeling: Codable, Sendable {
+    public let rating: Int  // 1-5
+    public let note: String?  // Optional text description
 
-    init(rating: Int, note: String? = nil) {
+    public init(rating: Int, note: String? = nil) {
         self.rating = rating
         self.note = note
     }
@@ -160,16 +160,16 @@ struct PreWorkoutFeeling: Codable {
 
 // MARK: - Session
 
-struct Session: Codable, Identifiable {
-    let id: UUID
-    let date: Date
-    let workoutPlanId: UUID
-    var preWorkoutFeeling: PreWorkoutFeeling?
-    var exerciseLogs: [ExerciseSessionLog]
-    var stats: SessionStats
-    var synced: Bool
+public struct Session: Codable, Identifiable, Sendable {
+    public let id: UUID
+    public let date: Date
+    public let workoutPlanId: UUID
+    public var preWorkoutFeeling: PreWorkoutFeeling?
+    public var exerciseLogs: [ExerciseSessionLog]
+    public var stats: SessionStats
+    public var synced: Bool
 
-    init(
+    public init(
         id: UUID = UUID(),
         date: Date = Date(),
         workoutPlanId: UUID,
@@ -188,18 +188,22 @@ struct Session: Codable, Identifiable {
     }
 }
 
-struct SessionStats: Codable {
-    var totalVolume: Double
+public struct SessionStats: Codable, Sendable {
+    public var totalVolume: Double
+
+    public init(totalVolume: Double) {
+        self.totalVolume = totalVolume
+    }
 }
 
 // MARK: - WorkoutPlan
 
-struct WorkoutPlan: Codable, Identifiable {
-    let id: UUID
-    let name: String
-    let order: [UUID]  // exerciseIds in order
+public struct WorkoutPlan: Codable, Identifiable, Sendable {
+    public let id: UUID
+    public let name: String
+    public let order: [UUID]  // exerciseIds in order
 
-    init(id: UUID = UUID(), name: String, order: [UUID]) {
+    public init(id: UUID = UUID(), name: String, order: [UUID]) {
         self.id = id
         self.name = name
         self.order = order

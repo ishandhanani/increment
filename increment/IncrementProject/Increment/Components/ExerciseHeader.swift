@@ -1,4 +1,5 @@
 import SwiftUI
+import IncrementFeature
 
 struct ExerciseHeader: View {
     let exerciseName: String

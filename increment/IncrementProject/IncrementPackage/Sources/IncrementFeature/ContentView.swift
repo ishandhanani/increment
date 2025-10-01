@@ -1,10 +1,12 @@
 import SwiftUI
 
 @MainActor
-struct ContentView: View {
+public struct ContentView: View {
     @Environment(SessionManager.self) private var sessionManager
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         ZStack {
             // Terminal-style background
             Color(red: 0.1, green: 0.15, blue: 0.3)
