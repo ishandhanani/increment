@@ -5,7 +5,7 @@ import Observation
 /// Manages the current workout session state
 @Observable
 @MainActor
-class SessionManager {
+public class SessionManager {
     // MARK: - Observable State
 
     var currentSession: Session?
@@ -42,7 +42,7 @@ class SessionManager {
 
     // MARK: - Initialization
 
-    init() {
+    public init() {
         loadDefaultExercises()
         loadDefaultWorkoutPlan()
         loadPersistedState()
