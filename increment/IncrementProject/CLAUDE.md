@@ -1,5 +1,7 @@
 # Project Overview
 
+> **⚠️ IMPORTANT:** All UI/UX design decisions MUST reference and follow the principles defined in [`DESIGN.md`](../DESIGN.md). This includes layout patterns, component choices, interaction rules, and visual language. When making any design-related changes, consult DESIGN.md first.
+
 This is a native **iOS application** built with **Swift 6.1+** and **SwiftUI**. The codebase targets **iOS 18.0 and later**, allowing full use of modern Swift and iOS APIs. All concurrency is handled with **Swift Concurrency** (async/await, actors, @MainActor isolation) ensuring thread-safe code.
 
 - **Frameworks & Tech:** SwiftUI for UI, Swift Concurrency with strict mode, Swift Package Manager for modular architecture
