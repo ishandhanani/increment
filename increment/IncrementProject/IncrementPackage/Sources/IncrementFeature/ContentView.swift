@@ -322,10 +322,15 @@ struct WarmupView: View {
     @Environment(SessionManager.self) private var sessionManager
 
     var body: some View {
+        let _ = print("🏋️ WarmupView body called")
+        let _ = print("🏋️ currentExerciseLog: \(sessionManager.currentExerciseLog?.exerciseId.uuidString ?? "nil")")
+        let _ = print("🏋️ sessionState: \(sessionManager.sessionState)")
+
         VStack(spacing: 0) {
             // Header
             if let exerciseLog = sessionManager.currentExerciseLog,
                let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId] {
+                let _ = print("🏋️ Found profile for exercise: \(profile.name)")
                 ExerciseHeader(
                     exerciseName: profile.name,
                     setInfo: "Warmup",

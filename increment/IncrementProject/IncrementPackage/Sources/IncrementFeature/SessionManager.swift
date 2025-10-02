@@ -60,11 +60,18 @@ public class SessionManager {
     }
 
     public func resumeSession() {
+        print("🔄 resumeSession() called")
+        print("🔄 currentSession: \(currentSession != nil)")
+        print("🔄 isActive: \(currentSession?.isActive ?? false)")
+
         guard let session = currentSession,
               session.isActive,
               !PersistenceManager.shared.isSessionStale(session) else {
+            print("🔄 resumeSession() guard failed")
             return
         }
+
+        print("🔄 resumeSession() proceeding with resume")
 
         // Restore exercise index
         if let exerciseIndex = session.currentExerciseIndex {
@@ -77,22 +84,36 @@ public class SessionManager {
         }
 
         // Restore session state first
-        if let stateRaw = session.sessionStateRaw {
-            sessionState = deserializeSessionState(stateRaw) ?? .intro
+        if let stateRaw = session.sessionStateRaw, !stateRaw.isEmpty {
+            sessionState = deserializeSessionState(stateRaw) ?? .preWorkout
+            print("🔄 Restored sessionState from raw: \(stateRaw) -> \(sessionState)")
+        } else {
+            // Fallback: if no state saved, determine based on session progress
+            if session.preWorkoutFeeling != nil && session.exerciseLogs.isEmpty {
+                // Had pre-workout feeling but no exercises logged yet - likely in stretching or warmup
+                sessionState = .preWorkout
+            } else if !session.exerciseLogs.isEmpty {
+                // Has exercise logs - go to review of last exercise
+                sessionState = .review
+            } else {
+                // Unknown state - start at pre-workout
+                sessionState = .preWorkout
+            }
+            print("🔄 Fallback sessionState set to: \(sessionState)")
         }
 
-        // Restore current exercise log if in mid-exercise
-        if currentExerciseIndex < session.exerciseLogs.count {
+        // Restore current exercise log
+        // First try to restore the in-progress exercise log saved in the session
+        if let savedLog = session.currentExerciseLog {
+            currentExerciseLog = savedLog
+            print("🔄 Restored currentExerciseLog from session: \(savedLog.exerciseId)")
+        } else if currentExerciseIndex < session.exerciseLogs.count {
+            // Fall back to completed exercise log at this index
             currentExerciseLog = session.exerciseLogs[currentExerciseIndex]
-            // Restore prescription if in working set or rest
-            if case .workingSet = sessionState {
-                computeInitialPrescription()
-            } else if case .rest = sessionState {
-                computeInitialPrescription()
-            }
+            print("🔄 Restored currentExerciseLog from exerciseLogs at index \(currentExerciseIndex)")
         } else if let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }),
                   currentExerciseIndex < plan.order.count {
-            // Exercise was started but not logged yet
+            // Exercise was started but not logged yet - create a new log
             let exerciseId = plan.order[currentExerciseIndex]
             if let profile = exerciseProfiles[exerciseId] {
                 let startWeight = exerciseStates[exerciseId]?.lastStartLoad ?? 45.0
@@ -100,6 +121,26 @@ public class SessionManager {
                     exerciseId: exerciseId,
                     startWeight: startWeight
                 )
+                print("🔄 Created new currentExerciseLog for exerciseId: \(exerciseId)")
+            } else {
+                print("🔄 ERROR: No profile found for exerciseId: \(exerciseId)")
+            }
+        } else {
+            print("🔄 ERROR: Could not restore currentExerciseLog - no valid source")
+        }
+
+        print("🔄 Final currentExerciseLog: \(currentExerciseLog?.exerciseId.uuidString ?? "nil")")
+
+        // Restore prescription from last set log if available
+        if let lastSet = currentExerciseLog?.setLogs.last {
+            nextPrescription = (reps: lastSet.targetReps, weight: lastSet.targetWeight)
+        }
+
+        // If still no prescription and we're in a state that needs one, compute it
+        if nextPrescription == nil {
+            if case .workingSet = sessionState {
+                computeInitialPrescription()
+            } else if case .rest = sessionState {
                 computeInitialPrescription()
             }
         }
@@ -109,6 +150,7 @@ public class SessionManager {
     }
 
     public func discardSession() {
+        print("🗑️ discardSession() called")
         currentSession = nil
         currentExerciseIndex = 0
         currentSetIndex = 0
@@ -118,6 +160,7 @@ public class SessionManager {
         isFirstExercise = true
 
         PersistenceManager.shared.clearCurrentSession()
+        print("🗑️ discardSession() completed, sessionState = .intro")
     }
 
     private func serializeSessionState(_ state: SessionState) -> String {
@@ -189,6 +232,9 @@ public class SessionManager {
         currentExerciseIndex = 0
         currentSetIndex = 0
         isFirstExercise = true
+
+        // Persist exercise profiles so they're available after app restart
+        PersistenceManager.shared.saveExerciseProfiles(exerciseProfiles)
 
         // Show pre-workout feeling screen
         sessionState = .preWorkout
@@ -552,6 +598,7 @@ public class SessionManager {
         session.currentExerciseIndex = currentExerciseIndex
         session.currentSetIndex = currentSetIndex
         session.sessionStateRaw = serializeSessionState(sessionState)
+        session.currentExerciseLog = currentExerciseLog  // Save in-progress exercise log
         session.lastUpdated = Date()
 
         // Mark as inactive if done
@@ -579,14 +626,19 @@ public class SessionManager {
     }
 
     private func loadPersistedState() {
+        print("💾 loadPersistedState() called")
         // Load exercise states
         exerciseStates = PersistenceManager.shared.loadExerciseStates()
 
         // Load profiles (or use defaults if none exist)
         let savedProfiles = PersistenceManager.shared.loadExerciseProfiles()
+        print("💾 Loaded \(savedProfiles.count) saved profiles from persistence")
+        print("💾 Current exerciseProfiles count before merge: \(exerciseProfiles.count)")
         if !savedProfiles.isEmpty {
             exerciseProfiles = savedProfiles
+            print("💾 Replaced exerciseProfiles with saved profiles")
         }
+        print("💾 Final exerciseProfiles count: \(exerciseProfiles.count)")
 
         // Load workout plans
         let savedPlans = PersistenceManager.shared.loadWorkoutPlans()
@@ -610,6 +662,7 @@ public class SessionManager {
     // MARK: - Default Data
 
     private func loadDefaultExercises() {
+        print("📋 loadDefaultExercises() called")
         let benchPress = ExerciseProfile(
             name: "Barbell Bench Press",
             category: .barbell,
@@ -640,6 +693,7 @@ public class SessionManager {
 
         exerciseProfiles[benchPress.id] = benchPress
         exerciseProfiles[squat.id] = squat
+        print("📋 Loaded \(exerciseProfiles.count) default exercises")
     }
 
     private func loadDefaultWorkoutPlan() {

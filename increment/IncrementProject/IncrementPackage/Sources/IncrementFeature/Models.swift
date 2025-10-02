@@ -174,6 +174,7 @@ public struct Session: Codable, Identifiable, Sendable {
     public var currentExerciseIndex: Int?
     public var currentSetIndex: Int?
     public var sessionStateRaw: String?  // Serialized SessionState
+    public var currentExerciseLog: ExerciseSessionLog?  // In-progress exercise log
     public var lastUpdated: Date
 
     public init(
@@ -188,6 +189,7 @@ public struct Session: Codable, Identifiable, Sendable {
         currentExerciseIndex: Int? = nil,
         currentSetIndex: Int? = nil,
         sessionStateRaw: String? = nil,
+        currentExerciseLog: ExerciseSessionLog? = nil,
         lastUpdated: Date = Date()
     ) {
         self.id = id
@@ -201,6 +203,7 @@ public struct Session: Codable, Identifiable, Sendable {
         self.currentExerciseIndex = currentExerciseIndex
         self.currentSetIndex = currentSetIndex
         self.sessionStateRaw = sessionStateRaw
+        self.currentExerciseLog = currentExerciseLog
         self.lastUpdated = lastUpdated
     }
 }
