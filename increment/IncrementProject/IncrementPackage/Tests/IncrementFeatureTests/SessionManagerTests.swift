@@ -13,7 +13,7 @@ import Foundation
  * without crashes or data inconsistencies.
  */
 
-@Suite("SessionManager Integration Tests")
+@Suite("SessionManager Integration Tests", .serialized)
 struct SessionManagerTests {
 
     /// Test the complete flow from pre-workout to first working set
