@@ -1,4 +1,4 @@
-import ActivityKit
+@preconcurrency import ActivityKit
 import Foundation
 
 /// Manages Live Activities for workout sessions
@@ -7,7 +7,6 @@ public class LiveActivityManager {
     public static let shared = LiveActivityManager()
 
     private var currentActivity: Activity<WorkoutLiveActivityAttributes>?
-    private let updateQueue = DispatchQueue(label: "com.increment.liveactivity.updates", qos: .userInitiated)
 
     private init() {}
 
@@ -60,7 +59,7 @@ public class LiveActivityManager {
         }
     }
 
-    /// Update the Live Activity with new state (serialized to prevent race conditions)
+    /// Update the Live Activity with new state
     public func updateActivity(
         exerciseName: String,
         currentSet: Int,
@@ -77,38 +76,25 @@ public class LiveActivityManager {
             return
         }
 
-        // Serialize updates to prevent race conditions
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            updateQueue.async { [weak activity] in
-                Task { @MainActor in
-                    guard let activity = activity else {
-                        continuation.resume()
-                        return
-                    }
+        let updatedState = WorkoutLiveActivityAttributes.ContentState(
+            currentExercise: exerciseName,
+            currentSet: currentSet,
+            totalSets: totalSets,
+            restTimeRemaining: restTimeRemaining,
+            nextWeight: nextWeight,
+            nextReps: nextReps,
+            isResting: isResting,
+            exercisesCompleted: exercisesCompleted,
+            totalExercises: totalExercises
+        )
 
-                    let updatedState = WorkoutLiveActivityAttributes.ContentState(
-                        currentExercise: exerciseName,
-                        currentSet: currentSet,
-                        totalSets: totalSets,
-                        restTimeRemaining: restTimeRemaining,
-                        nextWeight: nextWeight,
-                        nextReps: nextReps,
-                        isResting: isResting,
-                        exercisesCompleted: exercisesCompleted,
-                        totalExercises: totalExercises
-                    )
-
-                    await activity.update(
-                        ActivityContent<WorkoutLiveActivityAttributes.ContentState>(
-                            state: updatedState,
-                            staleDate: nil
-                        )
-                    )
-                    print("🔄 Live Activity updated")
-                    continuation.resume()
-                }
-            }
-        }
+        await activity.update(
+            ActivityContent<WorkoutLiveActivityAttributes.ContentState>(
+                state: updatedState,
+                staleDate: nil
+            )
+        )
+        print("🔄 Live Activity updated")
     }
 
     /// End the Live Activity with meaningful final state
