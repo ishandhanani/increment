@@ -32,6 +32,12 @@ final class IncrementUITests: XCTestCase {
         // Wait for app to load
         sleep(2)
 
+        // Discard any resumable session first
+        if app.buttons["DISCARD"].exists {
+            app.buttons["DISCARD"].tap()
+            sleep(1)
+        }
+
         // Find and tap the START WORKOUT button
         let startButton = app.buttons["START WORKOUT"]
         XCTAssertTrue(startButton.exists, "START WORKOUT button should exist")
@@ -56,6 +62,12 @@ final class IncrementUITests: XCTestCase {
         app.launch()
 
         sleep(1)
+
+        // Discard any resumable session first
+        if app.buttons["DISCARD"].exists {
+            app.buttons["DISCARD"].tap()
+            sleep(1)
+        }
 
         // Start session
         app.buttons["START WORKOUT"].tap()
