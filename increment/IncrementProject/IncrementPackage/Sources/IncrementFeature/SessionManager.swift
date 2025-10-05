@@ -26,6 +26,9 @@ public class SessionManager {
     private var restTimer: RestTimer?
     private var cancellables = Set<AnyCancellable>()
 
+    // Live Activity management
+    private let liveActivityManager = LiveActivityManager.shared
+
     // MARK: - Session State
 
     public enum SessionState: Equatable {
@@ -328,7 +331,7 @@ public class SessionManager {
     }
 
     public func startExercise(exerciseId: UUID) {
-        guard exerciseProfiles[exerciseId] != nil else { return }
+        guard let profile = exerciseProfiles[exerciseId] else { return }
 
         // Get starting weight from state or use default
         let startWeight = exerciseStates[exerciseId]?.lastStartLoad ?? 45.0  // Default bar weight
@@ -351,6 +354,17 @@ public class SessionManager {
         }
 
         persistSession()
+
+        // Update Live Activity
+        Task {
+            await updateLiveActivity(
+                exerciseName: profile.name,
+                currentSet: 1,
+                totalSets: profile.sets,
+                restTimeRemaining: nil,
+                isResting: false
+            )
+        }
     }
 
     // MARK: - Warmup Flow
@@ -468,7 +482,21 @@ public class SessionManager {
         // Observe timer updates
         timer.$timeRemaining
             .sink { [weak self] remaining in
-                self?.sessionState = .rest(timeRemaining: remaining)
+                guard let self = self else { return }
+                self.sessionState = .rest(timeRemaining: remaining)
+
+                // Update Live Activity with rest timer
+                if let profile = self.exerciseProfiles[self.currentExerciseLog?.exerciseId ?? UUID()] {
+                    Task { @MainActor in
+                        await self.updateLiveActivity(
+                            exerciseName: profile.name,
+                            currentSet: self.currentSetIndex + 1,
+                            totalSets: profile.sets,
+                            restTimeRemaining: remaining,
+                            isResting: true
+                        )
+                    }
+                }
             }
             .store(in: &cancellables)
     }
@@ -554,6 +582,11 @@ public class SessionManager {
         persistSession()
 
         sessionState = .done
+
+        // End Live Activity
+        Task {
+            await endLiveActivity()
+        }
     }
 
     // MARK: - Helper Methods
@@ -740,5 +773,55 @@ public class SessionManager {
         )
         workoutPlans.append(defaultPlan)
         print("📋 workoutPlans.count after append: \(workoutPlans.count)")
+    }
+
+    // MARK: - Live Activity Helpers
+
+    private func updateLiveActivity(
+        exerciseName: String,
+        currentSet: Int,
+        totalSets: Int,
+        restTimeRemaining: Int?,
+        isResting: Bool
+    ) async {
+        guard let session = currentSession,
+              let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }) else {
+            return
+        }
+
+        let nextWeight = nextPrescription?.weight ?? 0
+        let nextReps = nextPrescription?.reps ?? 0
+        let totalExercises = plan.order.count
+        let exercisesCompleted = session.exerciseLogs.count
+
+        // Start or update activity
+        if liveActivityManager.hasActiveActivity {
+            await liveActivityManager.updateActivity(
+                exerciseName: exerciseName,
+                currentSet: currentSet,
+                totalSets: totalSets,
+                restTimeRemaining: restTimeRemaining,
+                nextWeight: nextWeight,
+                nextReps: nextReps,
+                isResting: isResting,
+                exercisesCompleted: exercisesCompleted,
+                totalExercises: totalExercises
+            )
+        } else {
+            await liveActivityManager.startActivity(
+                workoutName: plan.name,
+                exerciseName: exerciseName,
+                currentSet: currentSet,
+                totalSets: totalSets,
+                nextWeight: nextWeight,
+                nextReps: nextReps,
+                exercisesCompleted: exercisesCompleted,
+                totalExercises: totalExercises
+            )
+        }
+    }
+
+    public func endLiveActivity() async {
+        await liveActivityManager.endActivity()
     }
 }
