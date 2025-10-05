@@ -53,6 +53,7 @@ public struct ContentView: View {
 struct IntroView: View {
     @Environment(SessionManager.self) private var sessionManager
     @Binding var showAnalytics: Bool
+    @State private var showResumePrompt = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -78,15 +79,67 @@ struct IntroView: View {
 
             Spacer()
 
+            // Resume prompt if there's an active session
+            if sessionManager.hasResumableSession {
+                VStack(spacing: 12) {
+                    Text("Previous session detected")
+                        .font(.system(.body, design: .monospaced))
+                        .opacity(0.7)
+
+                    HStack(spacing: 12) {
+                        Button {
+                            sessionManager.resumeSession()
+                        } label: {
+                            Text("RESUME")
+                                .font(.system(.body, design: .monospaced))
+                                .fontWeight(.bold)
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(Color.green.opacity(0.8))
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            sessionManager.discardSession()
+                        } label: {
+                            Text("DISCARD")
+                                .font(.system(.body, design: .monospaced))
+                                .fontWeight(.bold)
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(Color.red.opacity(0.8))
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 24)
+            }
+
             // Dual Action Buttons
             VStack(spacing: 12) {
                 // Start Session Button
                 ActionBar {
+                    print("🎬 START WORKOUT button tapped")
+                    print("🎬 hasResumableSession: \(sessionManager.hasResumableSession)")
+                    // Discard any existing session when starting a new one
+                    if sessionManager.hasResumableSession {
+                        sessionManager.discardSession()
+                    }
+                    print("🎬 workoutPlans.count: \(sessionManager.workoutPlans.count)")
+                    print("🎬 workoutPlans.first: \(sessionManager.workoutPlans.first?.id.uuidString ?? "nil")")
                     if let firstPlan = sessionManager.workoutPlans.first {
+                        print("🎬 Calling startSession with plan: \(firstPlan.id.uuidString)")
                         sessionManager.startSession(workoutPlanId: firstPlan.id)
+                    } else {
+                        print("🎬 ERROR: No workout plans available!")
                     }
                 } label: {
-                    Text("START WORKOUT")
+                    Text(sessionManager.hasResumableSession ? "START NEW WORKOUT" : "START WORKOUT")
                 }
 
                 // View Analytics Button
@@ -276,10 +329,15 @@ struct WarmupView: View {
     @Environment(SessionManager.self) private var sessionManager
 
     var body: some View {
+        let _ = print("🏋️ WarmupView body called")
+        let _ = print("🏋️ currentExerciseLog: \(sessionManager.currentExerciseLog?.exerciseId.uuidString ?? "nil")")
+        let _ = print("🏋️ sessionState: \(sessionManager.sessionState)")
+
         VStack(spacing: 0) {
             // Header
             if let exerciseLog = sessionManager.currentExerciseLog,
                let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId] {
+                let _ = print("🏋️ Found profile for exercise: \(profile.name)")
                 ExerciseHeader(
                     exerciseName: profile.name,
                     setInfo: "Warmup",

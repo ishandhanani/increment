@@ -24,7 +24,7 @@ struct PersistenceManagerTests {
 
     /// Test saving and loading complete session data
     /// Critical: Sessions contain all workout history - data loss here is catastrophic
-    @Test("PersistenceManager: Saves and loads sessions")
+    @Test("PersistenceManager: Saves and loads sessions", .serialized)
     func testSaveLoadSessions() async {
         // Arrange
         let manager = await PersistenceManager.shared
