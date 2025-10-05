@@ -732,4 +732,104 @@ struct TaskListView: View {
 
 ---
 
+# Live Activities Implementation
+
+This app includes **Live Activities** for real-time workout tracking on the lock screen and Dynamic Island.
+
+## Architecture
+
+Live Activities are implemented using:
+- **ActivityKit** framework (iOS 16.1+) for Live Activity lifecycle management
+- **WidgetKit** for rendering Lock Screen and Dynamic Island UI
+- **Widget Extension** target (`IncrementWidget`) containing all Live Activity UI code
+
+## Key Components
+
+### 1. Activity Attributes & State
+- **File**: `IncrementPackage/Sources/IncrementFeature/WorkoutLiveActivity.swift`
+- Defines static attributes (workout name) and dynamic content state (exercise, sets, rest timer, etc.)
+
+### 2. Live Activity Manager
+- **File**: `IncrementPackage/Sources/IncrementFeature/LiveActivityManager.swift`
+- Singleton service managing activity lifecycle: start, update, end
+- Handles ActivityKit API calls with proper error handling
+
+### 3. Notification Manager
+- **File**: `IncrementPackage/Sources/IncrementFeature/NotificationManager.swift`
+- Manages notification permissions (required for Live Activities)
+- Requests authorization on first launch
+
+### 4. Widget Extension UI
+- **File**: `IncrementWidget/WorkoutLiveActivityWidget.swift`
+- Complete Live Activity widget implementation
+- Lock Screen UI: Shows exercise, sets progress, rest timer, and next prescription
+- Dynamic Island: Compact (minimal info), minimal (split view), and expanded states
+- Real-time timer updates during rest periods
+
+### 5. Session Integration
+- **File**: `IncrementPackage/Sources/IncrementFeature/SessionManager.swift`
+- Integrates LiveActivityManager into workout flow
+- Updates Live Activity on exercise transitions
+- Provides real-time rest timer updates (every second)
+- Ends activity when workout completes
+
+## Widget Extension Setup
+
+The Widget Extension target must be configured in Xcode (cannot be done via CLI):
+
+1. **Add Widget Extension Target:**
+   - File → New → Target → Widget Extension
+   - Name: `IncrementWidget`
+   - Enable "Include Live Activity" checkbox
+   - Do NOT select "Include Configuration Intent"
+
+2. **Link IncrementFeature Package:**
+   - Select IncrementWidget target
+   - General tab → Frameworks and Libraries
+   - Add `IncrementFeature` from IncrementPackage
+
+3. **Configure Info.plist Keys:**
+   - Main app's Info.plist needs:
+     ```xml
+     <key>NSSupportsLiveActivities</key>
+     <true/>
+     <key>NSSupportsLiveActivitiesFrequentUpdates</key>
+     <true/>
+     ```
+   - Widget's Info.plist needs:
+     ```xml
+     <key>NSExtension</key>
+     <dict>
+         <key>NSExtensionPointIdentifier</key>
+         <string>com.apple.widgetkit-extension</string>
+     </dict>
+     ```
+
+4. **Clean Up Template Files:**
+   - Remove Xcode-generated template files (IncrementWidget.swift, IncrementWidgetLiveActivity.swift, etc.)
+   - Update IncrementWidgetBundle.swift to only include WorkoutLiveActivity()
+
+## Testing Live Activities
+
+1. Build and run on simulator (iOS 16.1+)
+2. Start a workout session
+3. Lock the device (Cmd+L)
+4. Grant notification permission when prompted
+5. Observe Live Activity on lock screen with real-time timer
+6. Unlock to see Dynamic Island compact view (on supported devices)
+
+## Permissions
+
+Live Activities require notification permissions. The app automatically requests authorization when starting the first Live Activity. Users must grant permission for Live Activities to appear.
+
+## Implementation Notes
+
+- **Real-time updates**: Timer updates every second during rest periods using RestTimer's publisher
+- **Frequent updates enabled**: Info.plist flag allows high-frequency updates for smooth countdown
+- **Automatic lifecycle**: Activities start when exercise begins, update during rest, and end when session completes
+- **Error handling**: All ActivityKit calls include proper error handling and graceful fallbacks
+- **Type safety**: Using explicit ActivityContent types to satisfy Swift 6 strict concurrency
+
+---
+
 Remember: This project prioritizes clean, simple SwiftUI code using the platform's native state management. Keep the app shell minimal and implement all features in the Swift Package.
