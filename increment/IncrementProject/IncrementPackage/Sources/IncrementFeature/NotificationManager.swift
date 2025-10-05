@@ -1,4 +1,4 @@
-import UserNotifications
+@preconcurrency import UserNotifications
 import Foundation
 
 /// Manages notification permissions for Live Activities

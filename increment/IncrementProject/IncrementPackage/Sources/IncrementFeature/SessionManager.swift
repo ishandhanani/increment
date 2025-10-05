@@ -118,7 +118,7 @@ public class SessionManager {
                   currentExerciseIndex < plan.order.count {
             // Exercise was started but not logged yet - create a new log
             let exerciseId = plan.order[currentExerciseIndex]
-            if let profile = exerciseProfiles[exerciseId] {
+            if exerciseProfiles[exerciseId] != nil {
                 let startWeight = exerciseStates[exerciseId]?.lastStartLoad ?? 45.0
                 currentExerciseLog = ExerciseSessionLog(
                     exerciseId: exerciseId,
@@ -154,7 +154,7 @@ public class SessionManager {
             // Restart stretching timer with remaining time or default duration
             let duration = timeRemaining > 0 ? timeRemaining : 300
             startStretchingTimer(duration: duration)
-        case .rest(let timeRemaining):
+        case .rest:
             // Restart rest timer with default duration (can't reliably restore exact time)
             if let exerciseId = currentExerciseLog?.exerciseId,
                let profile = exerciseProfiles[exerciseId] {
@@ -825,9 +825,15 @@ public class SessionManager {
     }
 
     public func endLiveActivity() async {
-        let exercisesCompleted = currentExerciseLogs.count
-        let totalExercises = getCurrentPlanExercises().count
-        let finalExercise = exercisesCompleted > 0 ? currentExerciseLogs.last.flatMap { exerciseProfiles[$0.exerciseId]?.name } : nil
+        guard let session = currentSession,
+              let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }) else {
+            await liveActivityManager.endActivity()
+            return
+        }
+
+        let exercisesCompleted = session.exerciseLogs.count
+        let totalExercises = plan.exercises.count
+        let finalExercise = exercisesCompleted > 0 ? session.exerciseLogs.last.flatMap { exerciseProfiles[$0.exerciseId]?.name } : nil
 
         await liveActivityManager.endActivity(
             finalExercise: finalExercise,
