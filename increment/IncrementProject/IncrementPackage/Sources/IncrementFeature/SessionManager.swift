@@ -486,16 +486,19 @@ public class SessionManager {
                 self.sessionState = .rest(timeRemaining: remaining)
 
                 // Update Live Activity with rest timer
-                if let profile = self.exerciseProfiles[self.currentExerciseLog?.exerciseId ?? UUID()] {
-                    Task { @MainActor in
-                        await self.updateLiveActivity(
-                            exerciseName: profile.name,
-                            currentSet: self.currentSetIndex + 1,
-                            totalSets: profile.sets,
-                            restTimeRemaining: remaining,
-                            isResting: true
-                        )
-                    }
+                guard let exerciseLog = self.currentExerciseLog,
+                      let profile = self.exerciseProfiles[exerciseLog.exerciseId] else {
+                    return
+                }
+
+                Task { @MainActor in
+                    await self.updateLiveActivity(
+                        exerciseName: profile.name,
+                        currentSet: self.currentSetIndex + 1,
+                        totalSets: profile.sets,
+                        restTimeRemaining: remaining,
+                        isResting: true
+                    )
                 }
             }
             .store(in: &cancellables)
@@ -822,6 +825,14 @@ public class SessionManager {
     }
 
     public func endLiveActivity() async {
-        await liveActivityManager.endActivity()
+        let exercisesCompleted = currentExerciseLogs.count
+        let totalExercises = getCurrentPlanExercises().count
+        let finalExercise = exercisesCompleted > 0 ? currentExerciseLogs.last.flatMap { exerciseProfiles[$0.exerciseId]?.name } : nil
+
+        await liveActivityManager.endActivity(
+            finalExercise: finalExercise,
+            completedExercises: exercisesCompleted,
+            totalExercises: totalExercises
+        )
     }
 }

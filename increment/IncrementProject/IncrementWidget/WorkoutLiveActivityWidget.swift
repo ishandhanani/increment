@@ -3,6 +3,17 @@ import WidgetKit
 import SwiftUI
 import IncrementFeature
 
+// MARK: - Time Formatting Utility
+private func formatTime(_ seconds: Int) -> String {
+    let mins = seconds / 60
+    let secs = seconds % 60
+    if mins > 0 {
+        return String(format: "%d:%02d", mins, secs)
+    } else {
+        return String(format: "%ds", secs)
+    }
+}
+
 struct WorkoutLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: WorkoutLiveActivityAttributes.self) { context in
@@ -114,16 +125,6 @@ struct WorkoutLiveActivity: Widget {
             }
         }
     }
-
-    private func formatTime(_ seconds: Int) -> String {
-        let mins = seconds / 60
-        let secs = seconds % 60
-        if mins > 0 {
-            return String(format: "%d:%02d", mins, secs)
-        } else {
-            return String(format: "%ds", secs)
-        }
-    }
 }
 
 struct WorkoutLockScreenView: View {
@@ -199,15 +200,5 @@ struct WorkoutLockScreenView: View {
         }
         .padding(12)
         .activityBackgroundTint(Color.blue.opacity(0.1))
-    }
-
-    private func formatTime(_ seconds: Int) -> String {
-        let mins = seconds / 60
-        let secs = seconds % 60
-        if mins > 0 {
-            return String(format: "%d:%02d", mins, secs)
-        } else {
-            return String(format: "%ds", secs)
-        }
     }
 }

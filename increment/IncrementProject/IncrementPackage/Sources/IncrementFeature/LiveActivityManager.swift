@@ -7,6 +7,7 @@ public class LiveActivityManager {
     public static let shared = LiveActivityManager()
 
     private var currentActivity: Activity<WorkoutLiveActivityAttributes>?
+    private let updateQueue = DispatchQueue(label: "com.increment.liveactivity.updates", qos: .userInitiated)
 
     private init() {}
 
@@ -21,6 +22,15 @@ public class LiveActivityManager {
         exercisesCompleted: Int,
         totalExercises: Int
     ) async {
+        // Check notification authorization before starting activity
+        let notificationManager = NotificationManager.shared
+        let isAuthorized = await notificationManager.isAuthorized()
+
+        if !isAuthorized {
+            // Request authorization if not already granted
+            _ = await notificationManager.requestAuthorization()
+        }
+
         // End any existing activity first
         await endActivity()
 
@@ -50,7 +60,7 @@ public class LiveActivityManager {
         }
     }
 
-    /// Update the Live Activity with new state
+    /// Update the Live Activity with new state (serialized to prevent race conditions)
     public func updateActivity(
         exerciseName: String,
         currentSet: Int,
@@ -67,41 +77,58 @@ public class LiveActivityManager {
             return
         }
 
-        let updatedState = WorkoutLiveActivityAttributes.ContentState(
-            currentExercise: exerciseName,
-            currentSet: currentSet,
-            totalSets: totalSets,
-            restTimeRemaining: restTimeRemaining,
-            nextWeight: nextWeight,
-            nextReps: nextReps,
-            isResting: isResting,
-            exercisesCompleted: exercisesCompleted,
-            totalExercises: totalExercises
-        )
+        // Serialize updates to prevent race conditions
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            updateQueue.async { [weak activity] in
+                Task { @MainActor in
+                    guard let activity = activity else {
+                        continuation.resume()
+                        return
+                    }
 
-        await activity.update(
-            ActivityContent<WorkoutLiveActivityAttributes.ContentState>(
-                state: updatedState,
-                staleDate: nil
-            )
-        )
-        print("🔄 Live Activity updated")
+                    let updatedState = WorkoutLiveActivityAttributes.ContentState(
+                        currentExercise: exerciseName,
+                        currentSet: currentSet,
+                        totalSets: totalSets,
+                        restTimeRemaining: restTimeRemaining,
+                        nextWeight: nextWeight,
+                        nextReps: nextReps,
+                        isResting: isResting,
+                        exercisesCompleted: exercisesCompleted,
+                        totalExercises: totalExercises
+                    )
+
+                    await activity.update(
+                        ActivityContent<WorkoutLiveActivityAttributes.ContentState>(
+                            state: updatedState,
+                            staleDate: nil
+                        )
+                    )
+                    print("🔄 Live Activity updated")
+                    continuation.resume()
+                }
+            }
+        }
     }
 
-    /// End the Live Activity
-    public func endActivity() async {
+    /// End the Live Activity with meaningful final state
+    public func endActivity(
+        finalExercise: String? = nil,
+        completedExercises: Int = 0,
+        totalExercises: Int = 0
+    ) async {
         guard let activity = currentActivity else { return }
 
         let finalState = WorkoutLiveActivityAttributes.ContentState(
-            currentExercise: "Complete",
+            currentExercise: finalExercise ?? "Workout Complete",
             currentSet: 0,
             totalSets: 0,
             restTimeRemaining: nil,
             nextWeight: 0,
             nextReps: 0,
             isResting: false,
-            exercisesCompleted: 0,
-            totalExercises: 0
+            exercisesCompleted: completedExercises,
+            totalExercises: totalExercises
         )
 
         await activity.end(
