@@ -124,12 +124,19 @@ struct IntroView: View {
             VStack(spacing: 12) {
                 // Start Session Button
                 ActionBar {
+                    print("🎬 START WORKOUT button tapped")
+                    print("🎬 hasResumableSession: \(sessionManager.hasResumableSession)")
                     // Discard any existing session when starting a new one
                     if sessionManager.hasResumableSession {
                         sessionManager.discardSession()
                     }
+                    print("🎬 workoutPlans.count: \(sessionManager.workoutPlans.count)")
+                    print("🎬 workoutPlans.first: \(sessionManager.workoutPlans.first?.id.uuidString ?? "nil")")
                     if let firstPlan = sessionManager.workoutPlans.first {
+                        print("🎬 Calling startSession with plan: \(firstPlan.id.uuidString)")
                         sessionManager.startSession(workoutPlanId: firstPlan.id)
+                    } else {
+                        print("🎬 ERROR: No workout plans available!")
                     }
                 } label: {
                     Text(sessionManager.hasResumableSession ? "START NEW WORKOUT" : "START WORKOUT")

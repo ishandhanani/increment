@@ -226,14 +226,23 @@ public class SessionManager {
     // MARK: - Session Control
 
     public func startSession(workoutPlanId: UUID) {
-        guard let plan = workoutPlans.first(where: { $0.id == workoutPlanId }) else { return }
+        print("🎯 startSession() called with planId: \(workoutPlanId.uuidString)")
+        print("🎯 workoutPlans.count: \(workoutPlans.count)")
+        print("🎯 Looking for plan with id: \(workoutPlanId.uuidString)")
+        guard let plan = workoutPlans.first(where: { $0.id == workoutPlanId }) else {
+            print("🎯 ERROR: Could not find plan with id: \(workoutPlanId.uuidString)")
+            print("🎯 Available plans: \(workoutPlans.map { $0.id.uuidString })")
+            return
+        }
+        print("🎯 Found plan: \(plan.name)")
 
         currentSession = Session(workoutPlanId: plan.id)
         currentExerciseIndex = 0
         currentSetIndex = 0
         isFirstExercise = true
 
-        // Persist exercise profiles so they're available after app restart
+        // Persist workout plans and exercise profiles so they're available after app restart
+        PersistenceManager.shared.saveWorkoutPlans(workoutPlans)
         PersistenceManager.shared.saveExerciseProfiles(exerciseProfiles)
 
         // Show pre-workout feeling screen
@@ -285,14 +294,26 @@ public class SessionManager {
     }
 
     public func finishStretching() {
+        print("🏃 finishStretching() called")
+        print("🏃 currentSession: \(currentSession != nil)")
+        print("🏃 currentSession.workoutPlanId: \(currentSession?.workoutPlanId.uuidString ?? "nil")")
+        print("🏃 workoutPlans.count: \(workoutPlans.count)")
+        print("🏃 workoutPlans: \(workoutPlans.map { $0.id.uuidString })")
+
         // Stop the stretching timer
         restTimer?.stop()
         restTimer = nil
 
         // Start first exercise
-        guard let plan = workoutPlans.first(where: { $0.id == currentSession?.workoutPlanId ?? UUID() }),
-              let firstExerciseId = plan.order.first else { return }
+        guard let session = currentSession,
+              let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }),
+              let firstExerciseId = plan.order.first else {
+            print("❌ finishStretching() failed - cannot find workout plan")
+            print("❌ Specifically: session=\(currentSession != nil), plan found=\(workoutPlans.contains(where: { $0.id == currentSession?.workoutPlanId }))")
+            return
+        }
 
+        print("✅ finishStretching() starting exercise: \(firstExerciseId)")
         startExercise(exerciseId: firstExerciseId)
     }
 
@@ -642,9 +663,13 @@ public class SessionManager {
 
         // Load workout plans
         let savedPlans = PersistenceManager.shared.loadWorkoutPlans()
+        print("💾 Loaded \(savedPlans.count) saved plans from persistence")
+        print("💾 workoutPlans.count before merge: \(workoutPlans.count)")
         if !savedPlans.isEmpty {
             workoutPlans = savedPlans
+            print("💾 Replaced workoutPlans with saved plans")
         }
+        print("💾 Final workoutPlans.count: \(workoutPlans.count)")
 
         // Load current session if exists
         if let savedSession = PersistenceManager.shared.loadCurrentSession() {
@@ -698,10 +723,12 @@ public class SessionManager {
 
     private func loadDefaultWorkoutPlan() {
         let exercises = Array(exerciseProfiles.keys)
+        print("📋 loadDefaultWorkoutPlan() called with \(exercises.count) exercises")
         let defaultPlan = WorkoutPlan(
             name: "Default Push/Pull",
             order: exercises
         )
         workoutPlans.append(defaultPlan)
+        print("📋 workoutPlans.count after append: \(workoutPlans.count)")
     }
 }
