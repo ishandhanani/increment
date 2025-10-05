@@ -280,6 +280,50 @@ xcodebuild test \
 - Use `UserDefaults(suiteName: "test")` to avoid polluting real data
 - Clean up after tests: `tearDown()` or `deferCleanup`
 
+### Test Serialization for Shared State
+
+**Critical**: Tests that access shared state (like `PersistenceManager.shared`) MUST use `.serialized` to prevent race conditions.
+
+```swift
+// ❌ Bad: Race condition - tests run in parallel and interfere
+@Test("PersistenceManager: Saves sessions")
+func testSaveLoadSessions() async {
+    await PersistenceManager.shared.saveSessions([session])
+    // Another test might clear this before we load!
+}
+
+// ✅ Good: Serialized execution prevents interference
+@Test("PersistenceManager: Saves sessions", .serialized)
+func testSaveLoadSessions() async {
+    await PersistenceManager.shared.saveSessions([session])
+    // No other persistence test will run until this completes
+}
+```
+
+**When to use `.serialized`:**
+- Tests accessing `PersistenceManager.shared` (singleton state)
+- Tests modifying `UserDefaults`
+- Tests accessing any shared mutable state
+- Tests that must run in a specific order
+
+**Why it matters:**
+- Without `.serialized`, tests run in parallel by default
+- Parallel tests accessing shared state cause flaky failures
+- CI failures often reveal race conditions hidden by local test ordering
+
+**Example from Issue #13:**
+```swift
+// This test was flaky in CI until .serialized was added
+@Test("PersistenceManager: Saves and loads sessions", .serialized)
+func testSaveLoadSessions() async {
+    let manager = await PersistenceManager.shared
+    await manager.clearAll()  // Must happen before other tests
+    await manager.saveSessions([session])
+    let loaded = await manager.loadSessions()
+    #expect(loaded.count == 1)
+}
+```
+
 ### Debugging Failed Tests
 
 1. **Check CI logs**: GitHub Actions artifacts have full xcresult bundles
