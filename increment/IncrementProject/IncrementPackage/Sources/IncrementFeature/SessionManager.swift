@@ -832,7 +832,7 @@ public class SessionManager {
         }
 
         let exercisesCompleted = session.exerciseLogs.count
-        let totalExercises = plan.exercises.count
+        let totalExercises = plan.order.count
         let finalExercise = exercisesCompleted > 0 ? session.exerciseLogs.last.flatMap { exerciseProfiles[$0.exerciseId]?.name } : nil
 
         await liveActivityManager.endActivity(

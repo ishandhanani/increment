@@ -49,7 +49,7 @@ jobs:
       - name: Run tests on iOS Simulator
         working-directory: increment/IncrementProject
         run: |
-          xcodebuild test \
+          set -o pipefail && xcodebuild test \
             -workspace Increment.xcworkspace \
             -scheme Increment \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.4' \
