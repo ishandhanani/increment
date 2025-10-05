@@ -145,8 +145,34 @@ public class SessionManager {
             }
         }
 
-        // Note: Timer states (stretching, rest) cannot be fully restored
-        // Users will need to skip or restart timers
+        // Restart timers if in a timer-dependent state
+        switch sessionState {
+        case .stretching(let timeRemaining):
+            // Restart stretching timer with remaining time or default duration
+            let duration = timeRemaining > 0 ? timeRemaining : 300
+            startStretchingTimer(duration: duration)
+        case .rest(let timeRemaining):
+            // Restart rest timer with default duration (can't reliably restore exact time)
+            if let exerciseId = currentExerciseLog?.exerciseId,
+               let profile = exerciseProfiles[exerciseId] {
+                startRestTimer(duration: profile.defaultRestSec)
+            }
+        default:
+            break
+        }
+    }
+
+    private func startStretchingTimer(duration: Int) {
+        let timer = RestTimer()
+        restTimer = timer
+        timer.start(duration: duration)
+        sessionState = .stretching(timeRemaining: duration)
+
+        timer.$timeRemaining
+            .sink { [weak self] remaining in
+                self?.sessionState = .stretching(timeRemaining: remaining)
+            }
+            .store(in: &cancellables)
     }
 
     public func discardSession() {
@@ -261,24 +287,8 @@ public class SessionManager {
 
     public func startStretchingPhase() {
         let stretchDuration = 300  // 5 minutes
-
-        // Create new timer
-        let timer = RestTimer()
-        restTimer = timer
-
-        // Start timer
-        timer.start(duration: stretchDuration)
-
-        // Initial state
-        sessionState = .stretching(timeRemaining: stretchDuration)
+        startStretchingTimer(duration: stretchDuration)
         persistSession()
-
-        // Observe timer updates
-        timer.$timeRemaining
-            .sink { [weak self] remaining in
-                self?.sessionState = .stretching(timeRemaining: remaining)
-            }
-            .store(in: &cancellables)
     }
 
     public func skipStretching() {

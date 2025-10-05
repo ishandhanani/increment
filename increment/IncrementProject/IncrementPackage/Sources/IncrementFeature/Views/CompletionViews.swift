@@ -91,7 +91,8 @@ struct DoneView: View {
             Spacer()
 
             ActionBar {
-                sessionManager.sessionState = .intro
+                // Clear the current session completely when workout is done
+                sessionManager.discardSession()
             } label: {
                 Text("BACK TO START")
             }
