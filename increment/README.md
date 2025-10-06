@@ -21,16 +21,21 @@ A terminal-inspired weightlifting tracker for fast, offline sessions with automa
 ## Project Structure
 
 ```
-Increment/
-├── IncrementApp.swift           # App entry point
-├── ContentView.swift             # Main UI with all views (Intro, Warmup, Load, Set, Rest, Review, Done)
-├── Models.swift                  # Data models (ExerciseProfile, Session, SetLog, etc.)
-├── SteelProgressionEngine.swift  # S.T.E.E.L. algorithm implementation
-├── SessionManager.swift          # Session state management
-├── RestTimer.swift               # Background-resilient timer
-├── PersistenceManager.swift      # Local storage via UserDefaults
-└── Info.plist                    # iOS app configuration
+increment/
+├── IncrementProject/        # Main Xcode project
+│   ├── Config/             # Build configuration files
+│   ├── Increment/          # App target (entry point only)
+│   ├── IncrementPackage/   # All features and business logic (SPM)
+│   ├── IncrementWidget/    # Live Activities widget extension
+│   ├── CLAUDE.md           # AI assistant development guidelines
+│   ├── README.md           # Project documentation
+│   └── *.xcworkspace       # Xcode workspace
+├── DESIGN.md               # UI/UX design principles
+├── PRD.md                  # Product requirements document
+└── TESTING.md              # Testing strategy
 ```
+
+**Development Note**: This project follows a **workspace + SPM package** architecture where all development work happens in `IncrementPackage`. The app target is just a thin wrapper. For AI-assisted development guidelines, see [IncrementProject/CLAUDE.md](./IncrementProject/CLAUDE.md).
 
 ## S.T.E.E.L.™ Progression Algorithm
 
