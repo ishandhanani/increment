@@ -20,6 +20,10 @@ struct IntroView: View {
                 Text("Terminal-inspired lifting tracker")
                     .font(.system(.body, design: .monospaced))
                     .opacity(0.7)
+
+                Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0")")
+                    .font(.system(.caption, design: .monospaced))
+                    .opacity(0.5)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(24)

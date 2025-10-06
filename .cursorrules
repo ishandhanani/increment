@@ -1,0 +1,18 @@
+# VCS Misc Repository
+
+This repository contains various small projects and experiments.
+
+## Important Instructions
+
+- Do what has been asked; nothing more, nothing less
+- NEVER create files unless they're absolutely necessary for achieving your goal
+- ALWAYS prefer editing an existing file to creating a new one
+- NEVER proactively create documentation files (*.md) or README files unless explicitly requested
+
+## Python Development
+
+See [PYTHON_DEV.md](./PYTHON_DEV.md) for Python-specific development guidelines.
+
+## Project-Specific Instructions
+
+For project-specific instructions (e.g., Increment iOS app), refer to the CLAUDE.md file in each project directory.
