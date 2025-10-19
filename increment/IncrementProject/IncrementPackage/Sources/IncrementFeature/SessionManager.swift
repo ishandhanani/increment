@@ -22,6 +22,10 @@ public class SessionManager {
     public var exerciseProfiles: [UUID: ExerciseProfile] = [:]
     public var exerciseStates: [UUID: ExerciseState] = [:]
 
+    // New workout system
+    public var workoutCycle: WorkoutCycle?
+    public var currentWorkoutTemplate: WorkoutTemplate?
+
     // Timer management
     private var restTimer: RestTimer?
     private var cancellables = Set<AnyCancellable>()
@@ -34,6 +38,7 @@ public class SessionManager {
     public enum SessionState: Equatable {
         case intro
         case preWorkout
+        case workoutOverview  // NEW: Shows workout summary before stretching
         case stretching(timeRemaining: Int)  // 5-minute stretching countdown
         case warmup(step: Int)  // 0 = 50%×5, 1 = 70%×3
         case load
@@ -48,6 +53,7 @@ public class SessionManager {
     public init() {
         loadDefaultExercises()
         loadDefaultWorkoutPlan()
+        loadDefaultWorkoutCycle()
         loadPersistedState()
     }
 
@@ -75,6 +81,25 @@ public class SessionManager {
         }
 
         print("🔄 resumeSession() proceeding with resume")
+
+        // IMPORTANT: Restore workout data from session-scoped storage
+        if let sessionPlan = session.workoutPlan,
+           let sessionProfiles = session.exerciseProfilesForSession {
+            print("🔄 Restoring workout data from session storage")
+            workoutPlans = [sessionPlan]
+            exerciseProfiles = sessionProfiles
+            print("🔄 Restored \(sessionProfiles.count) exercise profiles and workout plan")
+        } else if let template = currentWorkoutTemplate {
+            // Fallback: regenerate from template if session data is missing
+            print("🔄 Session data missing, regenerating from template: \(template.name)")
+            let (plan, profiles) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
+            workoutPlans = [plan]
+            exerciseProfiles = profiles
+            print("🔄 Generated \(profiles.count) exercise profiles and workout plan")
+        } else {
+            print("🔄 ERROR: No workout data available for resume")
+            return
+        }
 
         // Restore exercise index
         if let exerciseIndex = session.currentExerciseIndex {
@@ -198,6 +223,8 @@ public class SessionManager {
             return "intro"
         case .preWorkout:
             return "preWorkout"
+        case .workoutOverview:
+            return "workoutOverview"
         case .stretching(let timeRemaining):
             return "stretching:\(timeRemaining)"
         case .warmup(let step):
@@ -224,6 +251,8 @@ public class SessionManager {
             return .intro
         case "preWorkout":
             return .preWorkout
+        case "workoutOverview":
+            return .workoutOverview
         case "stretching":
             if components.count > 1, let time = Int(components[1]) {
                 return .stretching(timeRemaining: time)
@@ -254,36 +283,81 @@ public class SessionManager {
 
     // MARK: - Session Control
 
-    public func startSession(workoutPlanId: UUID) {
-        print("🎯 startSession() called with planId: \(workoutPlanId.uuidString)")
-        print("🎯 workoutPlans.count: \(workoutPlans.count)")
-        print("🎯 Looking for plan with id: \(workoutPlanId.uuidString)")
-        guard let plan = workoutPlans.first(where: { $0.id == workoutPlanId }) else {
-            print("🎯 ERROR: Could not find plan with id: \(workoutPlanId.uuidString)")
-            print("🎯 Available plans: \(workoutPlans.map { $0.id.uuidString })")
-            return
-        }
-        print("🎯 Found plan: \(plan.name)")
+    public func startSession() {
+        print("🎯 startSession() called - using dynamic generation system")
 
-        currentSession = Session(workoutPlanId: plan.id)
+        // Reset session state
         currentExerciseIndex = 0
         currentSetIndex = 0
         isFirstExercise = true
 
-        // Persist workout plans and exercise profiles so they're available after app restart
-        PersistenceManager.shared.saveWorkoutPlans(workoutPlans)
-        PersistenceManager.shared.saveExerciseProfiles(exerciseProfiles)
+        // Don't generate template yet - will happen in logPreWorkoutFeeling()
+        print("🎯 Session initialized - workout will be dynamically generated")
+
+        // Create a temporary session (UUID will be replaced when template is generated)
+        currentSession = Session(workoutPlanId: UUID())
 
         // Show pre-workout feeling screen
         sessionState = .preWorkout
     }
 
+    // DEPRECATED: Old method for backward compatibility
+    public func startSession(workoutPlanId: UUID) {
+        print("🎯 DEPRECATED: startSession(workoutPlanId:) called")
+        startSession()
+    }
+
     public func logPreWorkoutFeeling(_ feeling: PreWorkoutFeeling) {
         currentSession?.preWorkoutFeeling = feeling
-        persistSession()
 
-        // Start stretching phase (5 minutes = 300 seconds)
+        // Dynamically generate next workout based on cycle
+        let nextType = workoutCycle?.lastCompletedType?.next ?? .push
+        print("🏗️ Dynamically generating workout: \(nextType.rawValue)")
+        currentWorkoutTemplate = WorkoutBuilder.build(type: nextType)
+        print("🏗️ Generated template: \(currentWorkoutTemplate?.name ?? "nil")")
+
+        persistSession()
+        sessionState = .workoutOverview
+    }
+
+    // MARK: - Workout Overview
+
+    public func startWorkoutFromTemplate() {
+        guard let template = currentWorkoutTemplate else { return }
+
+        // Convert template to WorkoutPlan + ExerciseProfiles ONCE for this session
+        let (plan, profiles) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
+
+        // Create a new session with the correct workoutPlanId
+        if let oldSession = currentSession {
+            currentSession = Session(
+                id: oldSession.id,
+                date: oldSession.date,
+                workoutPlanId: plan.id,  // Use the generated plan's ID
+                preWorkoutFeeling: oldSession.preWorkoutFeeling,
+                exerciseLogs: oldSession.exerciseLogs,
+                stats: oldSession.stats,
+                synced: oldSession.synced,
+                workoutPlan: plan,
+                exerciseProfilesForSession: profiles,
+                isActive: oldSession.isActive,
+                currentExerciseIndex: oldSession.currentExerciseIndex,
+                currentSetIndex: oldSession.currentSetIndex,
+                sessionStateRaw: oldSession.sessionStateRaw,
+                currentExerciseLog: oldSession.currentExerciseLog,
+                lastUpdated: Date()
+            )
+        }
+
+        // Also populate the working dictionaries for this session
+        exerciseProfiles = profiles
+        workoutPlans = [plan]
+
+        print("✅ Generated workout plan with \(profiles.count) exercises for session")
+
+        // Start stretching phase
         startStretchingPhase()
+        persistSession()
     }
 
     // MARK: - Stretching Phase
@@ -580,6 +654,11 @@ public class SessionManager {
 
         session.stats.totalVolume = totalVolume
 
+        // Update workout cycle if we used a template
+        if let template = currentWorkoutTemplate {
+            workoutCycle?.completeWorkout(template.workoutType)
+        }
+
         // Save session
         currentSession = session
         persistSession()
@@ -694,28 +773,13 @@ public class SessionManager {
 
     private func loadPersistedState() {
         print("💾 loadPersistedState() called")
-        // Load exercise states
+
+        // Load exercise states (always needed for progression tracking)
         exerciseStates = PersistenceManager.shared.loadExerciseStates()
 
-        // Load profiles (or use defaults if none exist)
-        let savedProfiles = PersistenceManager.shared.loadExerciseProfiles()
-        print("💾 Loaded \(savedProfiles.count) saved profiles from persistence")
-        print("💾 Current exerciseProfiles count before merge: \(exerciseProfiles.count)")
-        if !savedProfiles.isEmpty {
-            exerciseProfiles = savedProfiles
-            print("💾 Replaced exerciseProfiles with saved profiles")
-        }
-        print("💾 Final exerciseProfiles count: \(exerciseProfiles.count)")
-
-        // Load workout plans
-        let savedPlans = PersistenceManager.shared.loadWorkoutPlans()
-        print("💾 Loaded \(savedPlans.count) saved plans from persistence")
-        print("💾 workoutPlans.count before merge: \(workoutPlans.count)")
-        if !savedPlans.isEmpty {
-            workoutPlans = savedPlans
-            print("💾 Replaced workoutPlans with saved plans")
-        }
-        print("💾 Final workoutPlans.count: \(workoutPlans.count)")
+        // IMPORTANT: Skip loading old workout plans and profiles
+        // We're now using the template system exclusively
+        print("💾 Skipping old workout plans and profiles - using template system")
 
         // Load current session if exists
         if let savedSession = PersistenceManager.shared.loadCurrentSession() {
@@ -726,6 +790,12 @@ public class SessionManager {
             } else {
                 // Keep session for potential resume
                 currentSession = savedSession
+
+                // Try to restore the workout template from the session's workoutPlanId
+                if let template = workoutCycle?.templates.first(where: { $0.id == savedSession.workoutPlanId }) {
+                    currentWorkoutTemplate = template
+                    print("💾 Restored workout template: \(template.name)")
+                }
             }
         }
     }
@@ -733,49 +803,25 @@ public class SessionManager {
     // MARK: - Default Data
 
     private func loadDefaultExercises() {
-        print("📋 loadDefaultExercises() called")
-        let benchPress = ExerciseProfile(
-            name: "Barbell Bench Press",
-            category: .barbell,
-            priority: .upper,
-            repRange: 5...8,
-            sets: 3,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 5.0,
-            plateOptions: [45, 25, 10, 5, 2.5],
-            defaultRestSec: 90
-        )
-
-        let squat = ExerciseProfile(
-            name: "Barbell Squat",
-            category: .barbell,
-            priority: .lower,
-            repRange: 5...8,
-            sets: 4,
-            baseIncrement: 10.0,
-            rounding: 5.0,
-            microAdjustStep: 5.0,
-            weeklyCapPct: 10.0,
-            plateOptions: [45, 25, 10, 5, 2.5],
-            defaultRestSec: 120
-        )
-
-        exerciseProfiles[benchPress.id] = benchPress
-        exerciseProfiles[squat.id] = squat
-        print("📋 Loaded \(exerciseProfiles.count) default exercises")
+        // Deprecated: Now using workout templates instead
+        print("📋 loadDefaultExercises() skipped - using workout templates")
     }
 
     private func loadDefaultWorkoutPlan() {
-        let exercises = Array(exerciseProfiles.keys)
-        print("📋 loadDefaultWorkoutPlan() called with \(exercises.count) exercises")
-        let defaultPlan = WorkoutPlan(
-            name: "Default Push/Pull",
-            order: exercises
+        // Deprecated: Now using workout templates instead
+        print("📋 loadDefaultWorkoutPlan() skipped - using workout templates")
+    }
+
+    private func loadDefaultWorkoutCycle() {
+        print("📋 loadDefaultWorkoutCycle() called - using dynamic generation")
+
+        // Initialize empty cycle - templates will be generated on-demand
+        workoutCycle = WorkoutCycle(
+            templates: [],  // Empty - we'll generate dynamically
+            lastCompletedType: nil
         )
-        workoutPlans.append(defaultPlan)
-        print("📋 workoutPlans.count after append: \(workoutPlans.count)")
+
+        print("📋 Workout cycle initialized - templates will be generated dynamically")
     }
 
     // MARK: - Live Activity Helpers

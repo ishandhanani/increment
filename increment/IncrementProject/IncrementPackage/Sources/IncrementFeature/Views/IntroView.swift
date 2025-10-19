@@ -81,14 +81,8 @@ struct IntroView: View {
                     if sessionManager.hasResumableSession {
                         sessionManager.discardSession()
                     }
-                    print("🎬 workoutPlans.count: \(sessionManager.workoutPlans.count)")
-                    print("🎬 workoutPlans.first: \(sessionManager.workoutPlans.first?.id.uuidString ?? "nil")")
-                    if let firstPlan = sessionManager.workoutPlans.first {
-                        print("🎬 Calling startSession with plan: \(firstPlan.id.uuidString)")
-                        sessionManager.startSession(workoutPlanId: firstPlan.id)
-                    } else {
-                        print("🎬 ERROR: No workout plans available!")
-                    }
+                    print("🎬 Starting new workout from template system")
+                    sessionManager.startSession()
                 } label: {
                     Text(sessionManager.hasResumableSession ? "START NEW WORKOUT" : "START WORKOUT")
                 }

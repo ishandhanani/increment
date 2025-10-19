@@ -25,6 +25,8 @@ public struct ContentView: View {
                         IntroView(showAnalytics: $showingAnalytics)
                     case .preWorkout:
                         PreWorkoutView()
+                    case .workoutOverview:
+                        WorkoutOverviewView()
                     case .stretching(_):
                         StretchingView()
                     case .warmup(_):
