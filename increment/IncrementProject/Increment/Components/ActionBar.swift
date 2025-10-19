@@ -11,8 +11,8 @@ struct ActionBar<Label: View>: View {
                 .fontWeight(.bold)
                 .frame(maxWidth: .infinity)
                 .padding(16)
-                .background(Color.white)
-                .foregroundColor(Color(red: 0.1, green: 0.15, blue: 0.3))
+                .background(Color.green.opacity(0.8))
+                .foregroundColor(.white)
                 .cornerRadius(8)
         }
         .buttonStyle(.plain)

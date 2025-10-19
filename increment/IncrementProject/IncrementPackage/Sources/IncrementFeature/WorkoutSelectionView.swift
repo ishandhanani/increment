@@ -19,7 +19,7 @@ public struct WorkoutSelectionView: View {
                 Button {
                     sessionManager.cancelWorkoutSelection()
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         Text("←")
                             .font(.system(.body, design: .monospaced))
                         Text("Cancel")
@@ -28,7 +28,7 @@ public struct WorkoutSelectionView: View {
                     .foregroundColor(.white.opacity(0.7))
                 }
                 .buttonStyle(.plain)
-                .padding(20)
+                .padding(24)
 
                 Spacer()
             }
@@ -37,7 +37,7 @@ public struct WorkoutSelectionView: View {
                 VStack(spacing: 24) {
                     // Workout header
                     if let template = template {
-                        VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 24) {
                             // Workout type
                             Text(template.name.uppercased())
                                 .font(.system(.largeTitle, design: .monospaced))
@@ -46,19 +46,19 @@ public struct WorkoutSelectionView: View {
                             // Workout details
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("TYPE: \(template.workoutType.rawValue.uppercased())")
-                                    .font(.system(.body, design: .monospaced))
+                                    .font(.system(.caption, design: .monospaced))
                                     .opacity(0.7)
 
                                 if !template.exercises.isEmpty {
                                     Text("EXERCISES: \(template.exercises.count)")
-                                        .font(.system(.body, design: .monospaced))
+                                        .font(.system(.caption, design: .monospaced))
                                         .opacity(0.7)
                                 }
 
                                 if let duration = template.estimatedDuration {
                                     let minutes = Int(duration / 60)
                                     Text("EST. TIME: \(minutes) MIN")
-                                        .font(.system(.body, design: .monospaced))
+                                        .font(.system(.caption, design: .monospaced))
                                         .opacity(0.7)
                                 }
                             }
@@ -71,7 +71,7 @@ public struct WorkoutSelectionView: View {
 
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("EXERCISES:")
-                                        .font(.system(.callout, design: .monospaced))
+                                        .font(.system(.body, design: .monospaced))
                                         .fontWeight(.bold)
                                         .opacity(0.7)
 
