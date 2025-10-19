@@ -4,6 +4,7 @@ import SwiftUI
 public struct ContentView: View {
     @Environment(SessionManager.self) private var sessionManager
     @State private var showingAnalytics = false
+    @State private var showingSettings = false
 
     public init() {}
 
@@ -13,7 +14,10 @@ public struct ContentView: View {
             Color(red: 0.1, green: 0.15, blue: 0.3)
                 .ignoresSafeArea()
 
-            if showingAnalytics {
+            if showingSettings {
+                // Settings View
+                SettingsView(isPresented: $showingSettings)
+            } else if showingAnalytics {
                 // Analytics View
                 AnalyticsView(isPresented: $showingAnalytics)
             } else {
@@ -22,7 +26,7 @@ public struct ContentView: View {
                     // Render appropriate view based on session state
                     switch sessionManager.sessionState {
                     case .intro:
-                        IntroView(showAnalytics: $showingAnalytics)
+                        IntroView(showAnalytics: $showingAnalytics, showSettings: $showingSettings)
                     case .preWorkout:
                         PreWorkoutView()
                     case .workoutOverview:

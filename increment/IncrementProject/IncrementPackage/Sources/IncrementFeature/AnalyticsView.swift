@@ -180,25 +180,26 @@ struct StatCard: View {
     let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text(title)
                 .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(.white.opacity(0.7))
+                .textCase(.uppercase)
 
             Text(value)
-                .font(.system(.title3, design: .monospaced))
+                .font(.system(.title2, design: .monospaced))
                 .fontWeight(.bold)
                 .foregroundColor(.white)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
+        .padding(24)
         .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.white.opacity(0.03))
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.04))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
         )
     }
 }
@@ -219,61 +220,65 @@ struct RecentTrendChart: View {
                 EmptyChartMessageView(message: "No workout data yet")
             } else {
                 Chart(trend) { dataPoint in
-                    LineMark(
-                        x: .value("Date", dataPoint.date),
-                        y: .value("Volume", dataPoint.volume)
-                    )
-                    .foregroundStyle(.white)
-                    .lineStyle(StrokeStyle(lineWidth: 3))
-                    .interpolationMethod(.catmullRom)
-
                     AreaMark(
                         x: .value("Date", dataPoint.date),
                         y: .value("Volume", dataPoint.volume)
                     )
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.white.opacity(0.3), .white.opacity(0.05)],
+                            colors: [Color.cyan.opacity(0.4), Color.cyan.opacity(0.05)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
                     )
                     .interpolationMethod(.catmullRom)
 
+                    LineMark(
+                        x: .value("Date", dataPoint.date),
+                        y: .value("Volume", dataPoint.volume)
+                    )
+                    .foregroundStyle(Color.cyan)
+                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                    .interpolationMethod(.catmullRom)
+
                     PointMark(
                         x: .value("Date", dataPoint.date),
                         y: .value("Volume", dataPoint.volume)
                     )
-                    .foregroundStyle(.white)
-                    .symbolSize(50)
+                    .foregroundStyle(Color.cyan)
+                    .symbolSize(60)
                 }
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(.white.opacity(0.1))
                         AxisValueLabel()
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(.white.opacity(0.6))
                             .font(.system(.caption2, design: .monospaced))
                     }
                 }
                 .chartYAxis {
                     AxisMarks(position: .leading) { value in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(.white.opacity(0.1))
                         AxisValueLabel {
                             if let volume = value.as(Double.self) {
                                 Text(formatVolume(volume))
                                     .font(.system(.caption2, design: .monospaced))
                             }
                         }
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.white.opacity(0.6))
                     }
                 }
-                .frame(height: 200)
-                .padding(20)
+                .frame(height: 240)
+                .padding(24)
                 .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.white.opacity(0.03))
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.white.opacity(0.04))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 )
             }
         }
