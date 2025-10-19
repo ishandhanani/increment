@@ -19,5 +19,11 @@ public enum AppLogger {
     /// General app-wide logger
     public static let general = Logger(subsystem: subsystem, category: "general")
 
+    /// Database operations and persistence
+    public static let database = Logger(subsystem: subsystem, category: "database")
+
+    /// Persistence layer operations
+    public static let persistence = Logger(subsystem: subsystem, category: "persistence")
+
     private static let subsystem = "com.increment.app"
 }

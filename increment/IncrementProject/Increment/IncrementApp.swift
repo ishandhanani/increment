@@ -9,6 +9,9 @@ struct IncrementApp: App {
         WindowGroup {
             ContentView()
                 .environment(sessionManager)
+                .task {
+                    await sessionManager.initialize()
+                }
         }
     }
 }

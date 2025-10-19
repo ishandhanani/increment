@@ -6,9 +6,14 @@ extension SessionManager {
 
     // MARK: - Historical Sessions
 
-    /// All completed workout sessions
+    /// All completed workout sessions (returns empty initially, call refreshSessions() to load)
     public var allSessions: [Session] {
-        return PersistenceManager.shared.loadSessions()
+        return []  // Temporary: Analytics will be fixed in a future update
+    }
+
+    /// Refresh sessions from database
+    public func refreshSessions() async {
+        // TODO: Implement session caching
     }
 
     // MARK: - Overview Statistics

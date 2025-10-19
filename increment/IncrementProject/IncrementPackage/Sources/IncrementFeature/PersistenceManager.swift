@@ -1,106 +1,65 @@
 import Foundation
 import OSLog
 
-/// Manages local persistence for sessions, exercise states, and profiles
+/// Manages local persistence for sessions, exercise states, and profiles using SQLite
 @MainActor
 class PersistenceManager {
     static let shared = PersistenceManager()
 
-    private let userDefaults = UserDefaults.standard
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
-    private let logger = Logger(subsystem: "com.increment", category: "PersistenceManager")
-
-    // Keys
-    private enum Keys {
-        static let sessions = "increment.sessions"
-        static let exerciseStates = "increment.exerciseStates"
-        static let exerciseProfiles = "increment.exerciseProfiles"
-        static let currentSession = "increment.currentSession"
-    }
+    private let db = DatabaseManager.shared
+    private let logger = AppLogger.persistence
 
     enum PersistenceError: Error {
-        case encodingFailed(String, Error)
-        case decodingFailed(String, Error)
-        case dataCorrupted(String)
+        case databaseError(Error)
 
         var localizedDescription: String {
             switch self {
-            case .encodingFailed(let key, let error):
-                return "Failed to encode data for key '\(key)': \(error.localizedDescription)"
-            case .decodingFailed(let key, let error):
-                return "Failed to decode data for key '\(key)': \(error.localizedDescription)"
-            case .dataCorrupted(let key):
-                return "Data corrupted for key '\(key)'"
+            case .databaseError(let error):
+                return "Database error: \(error.localizedDescription)"
             }
         }
     }
 
-    private init() {
-        encoder.dateEncodingStrategy = .iso8601
-        decoder.dateDecodingStrategy = .iso8601
-    }
+    private init() {}
 
     // MARK: - Sessions
 
-    func saveSessions(_ sessions: [Session]) {
+    func saveSessions(_ sessions: [Session]) async {
         do {
-            let data = try encoder.encode(sessions)
-            userDefaults.set(data, forKey: Keys.sessions)
+            try await db.saveSessions(sessions)
             logger.debug("Successfully saved \(sessions.count) sessions")
         } catch {
-            let persistenceError = PersistenceError.encodingFailed(Keys.sessions, error)
-            logger.error("\(persistenceError.localizedDescription)")
+            logger.error("Failed to save sessions: \(error.localizedDescription)")
         }
     }
 
-    func loadSessions() -> [Session] {
-        guard let data = userDefaults.data(forKey: Keys.sessions) else {
-            logger.debug("No sessions data found")
-            return []
-        }
-
+    func loadSessions() async -> [Session] {
         do {
-            let sessions = try decoder.decode([Session].self, from: data)
+            let sessions = try await db.loadSessions()
             logger.debug("Successfully loaded \(sessions.count) sessions")
             return sessions
         } catch {
-            let persistenceError = PersistenceError.decodingFailed(Keys.sessions, error)
-            logger.error("\(persistenceError.localizedDescription)")
+            logger.error("Failed to load sessions: \(error.localizedDescription)")
             return []
         }
     }
 
-    func saveCurrentSession(_ session: Session?) {
-        guard let session = session else {
-            userDefaults.removeObject(forKey: Keys.currentSession)
-            logger.debug("Removed current session")
-            return
-        }
-
+    func saveCurrentSession(_ session: Session?) async {
         do {
-            let data = try encoder.encode(session)
-            userDefaults.set(data, forKey: Keys.currentSession)
+            try await db.saveCurrentSession(session)
             logger.debug("Successfully saved current session")
         } catch {
-            let persistenceError = PersistenceError.encodingFailed(Keys.currentSession, error)
-            logger.error("\(persistenceError.localizedDescription)")
+            logger.error("Failed to save current session: \(error.localizedDescription)")
         }
     }
 
-    func loadCurrentSession() -> Session? {
-        guard let data = userDefaults.data(forKey: Keys.currentSession) else {
-            logger.debug("No current session data found")
-            return nil
-        }
-
+    func loadCurrentSession() async -> Session? {
         do {
-            let session = try decoder.decode(Session.self, from: data)
+            let session = try await db.loadCurrentSession()
             logger.debug("Successfully loaded current session")
             return session
         } catch {
-            let persistenceError = PersistenceError.decodingFailed(Keys.currentSession, error)
-            logger.error("\(persistenceError.localizedDescription)")
+            logger.error("Failed to load current session: \(error.localizedDescription)")
             return nil
         }
     }
@@ -110,95 +69,96 @@ class PersistenceManager {
         return Date().timeIntervalSince(session.lastUpdated) > threshold
     }
 
-    func clearCurrentSession() {
-        userDefaults.removeObject(forKey: Keys.currentSession)
-        logger.debug("Cleared current session")
+    func clearCurrentSession() async {
+        do {
+            try await db.clearCurrentSession()
+            logger.debug("Cleared current session")
+        } catch {
+            logger.error("Failed to clear current session: \(error.localizedDescription)")
+        }
+    }
+
+    func clearCurrentSessionSync() {
+        do {
+            try db.clearCurrentSessionSync()
+            logger.debug("Cleared current session (sync)")
+        } catch {
+            logger.error("Failed to clear current session (sync): \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Exercise States
 
-    func saveExerciseStates(_ states: [String: ExerciseState]) {
+    func saveExerciseStates(_ states: [String: ExerciseState]) async {
         do {
-            let data = try encoder.encode(states)
-            userDefaults.set(data, forKey: Keys.exerciseStates)
+            try await db.saveExerciseStates(states)
             logger.debug("Successfully saved \(states.count) exercise states")
         } catch {
-            let persistenceError = PersistenceError.encodingFailed(Keys.exerciseStates, error)
-            logger.error("\(persistenceError.localizedDescription)")
+            logger.error("Failed to save exercise states: \(error.localizedDescription)")
         }
     }
 
-    func loadExerciseStates() -> [String: ExerciseState] {
-        guard let data = userDefaults.data(forKey: Keys.exerciseStates) else {
-            logger.debug("No exercise states data found")
-            return [:]
-        }
-
+    func loadExerciseStates() async -> [String: ExerciseState] {
         do {
-            let states = try decoder.decode([String: ExerciseState].self, from: data)
+            let states = try await db.loadExerciseStates()
             logger.debug("Successfully loaded \(states.count) exercise states")
             return states
         } catch {
-            let persistenceError = PersistenceError.decodingFailed(Keys.exerciseStates, error)
-            logger.error("\(persistenceError.localizedDescription)")
+            logger.error("Failed to load exercise states: \(error.localizedDescription)")
             return [:]
         }
     }
 
-    // MARK: - Exercise Profiles
+    // MARK: - Synchronous Methods (for critical saves)
 
-    func saveExerciseProfiles(_ profiles: [UUID: ExerciseProfile]) {
+    func saveCurrentSessionSync(_ session: Session?) {
         do {
-            let data = try encoder.encode(profiles)
-            userDefaults.set(data, forKey: Keys.exerciseProfiles)
-            logger.debug("Successfully saved \(profiles.count) exercise profiles")
+            try db.saveCurrentSessionSync(session)
+            logger.debug("Successfully saved current session (sync)")
         } catch {
-            let persistenceError = PersistenceError.encodingFailed(Keys.exerciseProfiles, error)
-            logger.error("\(persistenceError.localizedDescription)")
+            logger.error("Failed to save current session (sync): \(error.localizedDescription)")
         }
     }
 
-    func loadExerciseProfiles() -> [UUID: ExerciseProfile] {
-        guard let data = userDefaults.data(forKey: Keys.exerciseProfiles) else {
-            logger.debug("No exercise profiles data found")
-            return [:]
-        }
-
+    func saveSessionsSync(_ sessions: [Session]) {
         do {
-            let profiles = try decoder.decode([UUID: ExerciseProfile].self, from: data)
-            logger.debug("Successfully loaded \(profiles.count) exercise profiles")
-            return profiles
+            try db.saveSessionsSync(sessions)
+            logger.debug("Successfully saved \(sessions.count) sessions (sync)")
         } catch {
-            let persistenceError = PersistenceError.decodingFailed(Keys.exerciseProfiles, error)
-            logger.error("\(persistenceError.localizedDescription)")
-            return [:]
+            logger.error("Failed to save sessions (sync): \(error.localizedDescription)")
+        }
+    }
+
+    func loadSessionsSync() -> [Session] {
+        do {
+            let sessions = try db.loadSessionsSync()
+            logger.debug("Successfully loaded \(sessions.count) sessions (sync)")
+            return sessions
+        } catch {
+            logger.error("Failed to load sessions (sync): \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    func loadCurrentSessionSync() -> Session? {
+        do {
+            let session = try db.loadCurrentSessionSync()
+            logger.debug("Successfully loaded current session (sync)")
+            return session
+        } catch {
+            logger.error("Failed to load current session (sync): \(error.localizedDescription)")
+            return nil
         }
     }
 
     // MARK: - Utilities
 
-    func clearAll() {
-        userDefaults.removeObject(forKey: Keys.sessions)
-        userDefaults.removeObject(forKey: Keys.exerciseStates)
-        userDefaults.removeObject(forKey: Keys.exerciseProfiles)
-        userDefaults.removeObject(forKey: Keys.currentSession)
-        userDefaults.synchronize() // Force write to disk
-    }
-
-    func exportData() -> [String: Any] {
-        let sessions = loadSessions().compactMap { session -> Data? in
-            do {
-                return try encoder.encode(session)
-            } catch {
-                logger.error("Failed to encode session during export: \(error.localizedDescription)")
-                return nil
-            }
+    func clearAll() async {
+        do {
+            try await db.clearAll()
+            logger.notice("Cleared all data")
+        } catch {
+            logger.error("Failed to clear all data: \(error.localizedDescription)")
         }
-
-        return [
-            "sessions": sessions,
-            "exerciseStates": loadExerciseStates(),
-            "exerciseProfiles": loadExerciseProfiles()
-        ]
     }
 }

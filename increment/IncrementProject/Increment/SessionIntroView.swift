@@ -37,7 +37,7 @@ struct IntroView: View {
 
             // Action Bar
             ActionBar {
-                sessionManager.startSession()
+                sessionManager.showWorkoutSelection()
             } label: {
                 Text("START SESSION")
             }
