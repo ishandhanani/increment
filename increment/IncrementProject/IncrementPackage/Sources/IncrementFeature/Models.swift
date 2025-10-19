@@ -228,19 +228,6 @@ public struct Session: Codable, Identifiable, Sendable {
     public var currentExerciseLog: ExerciseSessionLog?  // In-progress exercise log
     public var lastUpdated: Date
 
-    // Deprecated - kept for backward compatibility during migration
-    @available(*, deprecated, message: "Use workoutTemplate instead")
-    public var workoutPlanId: UUID {
-        workoutTemplate?.id ?? UUID()
-    }
-
-    @available(*, deprecated, message: "Use workoutTemplate instead")
-    public var workoutPlan: WorkoutPlan? {
-        guard let template = workoutTemplate else { return nil }
-        let (plan, _) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
-        return plan
-    }
-
     public init(
         id: UUID = UUID(),
         date: Date = Date(),
@@ -279,20 +266,6 @@ public struct SessionStats: Codable, Sendable {
 
     public init(totalVolume: Double) {
         self.totalVolume = totalVolume
-    }
-}
-
-// MARK: - WorkoutPlan
-
-public struct WorkoutPlan: Codable, Identifiable, Sendable {
-    public let id: UUID
-    public let name: String
-    public let order: [UUID]  // exerciseIds in order
-
-    public init(id: UUID = UUID(), name: String, order: [UUID]) {
-        self.id = id
-        self.name = name
-        self.order = order
     }
 }
 

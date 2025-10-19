@@ -88,7 +88,7 @@ public class SessionManager {
         } else if let template = session.workoutTemplate {
             // Fallback: regenerate profiles from template if missing
             AppLogger.session.notice("Session profiles missing, regenerating from template: \(template.name, privacy: .public)")
-            let (_, profiles) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
+            let profiles = WorkoutTemplateConverter.toExerciseProfiles(from: template)
             currentWorkoutTemplate = template
             exerciseProfiles = profiles
             AppLogger.session.debug("Generated \(profiles.count) exercise profiles from template")
@@ -296,12 +296,6 @@ public class SessionManager {
         sessionState = .preWorkout
     }
 
-    // DEPRECATED: Old method for backward compatibility
-    public func startSession(workoutPlanId: UUID) {
-        AppLogger.session.debug("Legacy startSession method called, redirecting to new flow")
-        startSession()
-    }
-
     public func logPreWorkoutFeeling(_ feeling: PreWorkoutFeeling) {
         currentSession?.preWorkoutFeeling = feeling
 
@@ -321,7 +315,7 @@ public class SessionManager {
         guard let template = currentWorkoutTemplate else { return }
 
         // Convert template to ExerciseProfiles for STEEL compatibility
-        let (_, profiles) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
+        let profiles = WorkoutTemplateConverter.toExerciseProfiles(from: template)
 
         // Update session with template and profiles
         if let oldSession = currentSession {
@@ -794,8 +788,8 @@ public class SessionManager {
                 // Keep session for potential resume
                 currentSession = savedSession
 
-                // Try to restore the workout template from the session's workoutPlanId
-                if let template = workoutCycle?.templates.first(where: { $0.id == savedSession.workoutPlanId }) {
+                // Restore the workout template from the session
+                if let template = savedSession.workoutTemplate {
                     currentWorkoutTemplate = template
                     AppLogger.session.info("Restored workout template: \(template.name, privacy: .public)")
                 }
