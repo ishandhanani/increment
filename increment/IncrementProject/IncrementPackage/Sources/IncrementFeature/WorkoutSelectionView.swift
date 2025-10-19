@@ -134,7 +134,7 @@ public struct WorkoutSelectionView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(red: 0.1, green: 0.15, blue: 0.3))
+        .background(IncrementTheme.backgroundGradient)
         .foregroundColor(.white)
     }
 }

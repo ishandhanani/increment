@@ -296,4 +296,55 @@ public class SteelProgressionEngine {
             return "Maintaining current load"
         }
     }
+
+    // MARK: - 1RM Calibration
+
+    /// Calculates starting weight for an exercise based on 1RM
+    /// Uses 70% of 1RM as starting point for optimal progression
+    /// - Parameters:
+    ///   - oneRepMax: User's estimated or tested 1RM
+    ///   - rounding: Rounding increment from exercise profile
+    /// - Returns: Starting weight rounded appropriately
+    public static func calculateStartingWeight(
+        from oneRepMax: Double,
+        rounding: Double
+    ) -> Double {
+        let startingWeight = oneRepMax * 0.70
+        return round(startingWeight, to: rounding)
+    }
+
+    /// Estimates 1RM for accessory/isolation exercises based on main lift 1RM
+    /// - Parameters:
+    ///   - mainLift1RM: 1RM of the main compound lift (e.g., bench press)
+    ///   - equipment: Equipment type for the accessory exercise
+    ///   - category: Lift category (push/pull/legs)
+    /// - Returns: Estimated 1RM for the accessory exercise
+    public static func estimate1RMForAccessory(
+        mainLift1RM: Double,
+        equipment: Equipment,
+        category: LiftCategory
+    ) -> Double {
+        // Accessory movements typically use 40-60% of main lift weight
+        let ratio: Double
+
+        switch equipment {
+        case .barbell:
+            // Secondary barbell movements (e.g., incline bench from flat bench)
+            ratio = 0.75
+        case .dumbbell:
+            // Dumbbells are roughly 40% of barbell per hand (80% total for pair)
+            ratio = 0.40  // Per dumbbell
+        case .cable:
+            // Cable isolation work
+            ratio = 0.50
+        case .machine:
+            // Machine work
+            ratio = 0.60
+        case .bodyweight, .cardioMachine:
+            // Not applicable for 1RM estimation
+            ratio = 0.0
+        }
+
+        return mainLift1RM * ratio
+    }
 }

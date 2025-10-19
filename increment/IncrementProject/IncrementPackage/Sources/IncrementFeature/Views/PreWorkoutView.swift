@@ -61,7 +61,7 @@ struct PreWorkoutView: View {
                                 )
                                 .foregroundColor(
                                     selectedRating == rating
-                                        ? Color(red: 0.1, green: 0.15, blue: 0.3)
+                                        ? .black
                                         : .white
                                 )
                                 .cornerRadius(8)

@@ -412,5 +412,76 @@ public enum SessionStatus: String, Codable, Sendable {
     case abandoned
 }
 
+// MARK: - Calibration Models
+
+/// User's 1RM input for main compound lifts
+public struct CalibrationInput: Codable, Sendable {
+    public let benchPress1RM: Double?    // Main push movement
+    public let squat1RM: Double?         // Main leg movement
+    public let deadlift1RM: Double?      // Main pull movement
+
+    public init(
+        benchPress1RM: Double? = nil,
+        squat1RM: Double? = nil,
+        deadlift1RM: Double? = nil
+    ) {
+        self.benchPress1RM = benchPress1RM
+        self.squat1RM = squat1RM
+        self.deadlift1RM = deadlift1RM
+    }
+}
+
+/// Result of calibration computation
+public struct CalibrationResult: Codable, Sendable {
+    public let exerciseStates: [String: ExerciseState]
+    public let completedAt: Date
+
+    public init(exerciseStates: [String: ExerciseState], completedAt: Date = Date()) {
+        self.exerciseStates = exerciseStates
+        self.completedAt = completedAt
+    }
+}
+
+// MARK: - Diagnostic Models
+
+/// Simplified monthly diagnostic result
+public struct DiagnosticResult: Codable, Sendable {
+    public let periodStart: Date
+    public let periodEnd: Date
+    public let averageWeightGain: Double  // lbs gained across all exercises
+    public let badDayFrequency: Double    // % of sessions with bad-day switch
+    public let stalledLifts: [StalledLift]
+    public let totalSessions: Int
+
+    public init(
+        periodStart: Date,
+        periodEnd: Date,
+        averageWeightGain: Double,
+        badDayFrequency: Double,
+        stalledLifts: [StalledLift],
+        totalSessions: Int
+    ) {
+        self.periodStart = periodStart
+        self.periodEnd = periodEnd
+        self.averageWeightGain = averageWeightGain
+        self.badDayFrequency = badDayFrequency
+        self.stalledLifts = stalledLifts
+        self.totalSessions = totalSessions
+    }
+}
+
+/// A lift that has shown no progress
+public struct StalledLift: Codable, Sendable {
+    public let exerciseId: String
+    public let exerciseName: String
+    public let weeksStalled: Int
+
+    public init(exerciseId: String, exerciseName: String, weeksStalled: Int) {
+        self.exerciseId = exerciseId
+        self.exerciseName = exerciseName
+        self.weeksStalled = weeksStalled
+    }
+}
+
 // MARK: - Codable Extensions for ClosedRange
 // Note: ClosedRange is already Codable in Swift 6.0+, so this extension is not needed

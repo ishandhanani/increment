@@ -151,11 +151,25 @@ class PersistenceManager {
         }
     }
 
+    // MARK: - Calibration Tracking
+
+    private let calibrationKey = "calibration_completed"
+
+    func saveCalibrationCompleted() async {
+        UserDefaults.standard.set(true, forKey: calibrationKey)
+        logger.debug("Calibration completed flag saved")
+    }
+
+    func hasCompletedCalibration() -> Bool {
+        return UserDefaults.standard.bool(forKey: calibrationKey)
+    }
+
     // MARK: - Utilities
 
     func clearAll() async {
         do {
             try await db.clearAll()
+            UserDefaults.standard.removeObject(forKey: calibrationKey)
             logger.notice("Cleared all data")
         } catch {
             logger.error("Failed to clear all data: \(error.localizedDescription)")
