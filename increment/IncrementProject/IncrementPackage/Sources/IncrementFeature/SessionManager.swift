@@ -807,7 +807,7 @@ public class SessionManager {
     private func loadDefaultWorkoutTemplates() {
         print("📋 loadDefaultWorkoutTemplates() called")
 
-        // Define lifts for each workout type
+        // PUSH DAY LIFTS
         let benchPress = Lift(
             name: "Barbell Bench Press",
             category: .push,
@@ -823,21 +823,63 @@ public class SessionManager {
             )
         )
 
-        let overheadPress = Lift(
-            name: "Overhead Press",
+        let inclineDumbbellBench = Lift(
+            name: "Incline Dumbbell Bench",
             category: .push,
-            equipment: .barbell,
-            muscleGroups: [.shoulders, .triceps],
+            equipment: .dumbbell,
+            muscleGroups: [.chest, .shoulders],
             steelConfig: SteelConfig(
-                repRange: 6...10,
+                repRange: 8...12,
                 baseIncrement: 5.0,
                 rounding: 2.5,
                 microAdjustStep: 2.5,
-                weeklyCapPct: 5.0,
-                plateOptions: [45, 25, 10, 5, 2.5]
+                weeklyCapPct: 7.0
             )
         )
 
+        let cableFly = Lift(
+            name: "Cable Fly",
+            category: .push,
+            equipment: .cable,
+            muscleGroups: [.chest],
+            steelConfig: SteelConfig(
+                repRange: 10...15,
+                baseIncrement: 5.0,
+                rounding: 2.5,
+                microAdjustStep: 2.5,
+                weeklyCapPct: 7.0
+            )
+        )
+
+        let tricepPushdown = Lift(
+            name: "Tricep Pushdown",
+            category: .push,
+            equipment: .cable,
+            muscleGroups: [.triceps],
+            steelConfig: SteelConfig(
+                repRange: 10...15,
+                baseIncrement: 5.0,
+                rounding: 2.5,
+                microAdjustStep: 2.5,
+                weeklyCapPct: 7.0
+            )
+        )
+
+        let skullcrushers = Lift(
+            name: "Skullcrushers",
+            category: .push,
+            equipment: .barbell,
+            muscleGroups: [.triceps],
+            steelConfig: SteelConfig(
+                repRange: 8...12,
+                baseIncrement: 5.0,
+                rounding: 2.5,
+                microAdjustStep: 2.5,
+                weeklyCapPct: 5.0
+            )
+        )
+
+        // PULL DAY LIFTS
         let pullups = Lift(
             name: "Weighted Pull-ups",
             category: .pull,
@@ -849,6 +891,20 @@ public class SessionManager {
                 rounding: 2.5,
                 microAdjustStep: 2.5,
                 weeklyCapPct: 5.0
+            )
+        )
+
+        let latPulldown = Lift(
+            name: "Lat Pulldown",
+            category: .pull,
+            equipment: .machine,
+            muscleGroups: [.back],
+            steelConfig: SteelConfig(
+                repRange: 8...12,
+                baseIncrement: 5.0,
+                rounding: 2.5,
+                microAdjustStep: 2.5,
+                weeklyCapPct: 7.0
             )
         )
 
@@ -867,6 +923,35 @@ public class SessionManager {
             )
         )
 
+        let dumbbellCurl = Lift(
+            name: "Dumbbell Curl",
+            category: .pull,
+            equipment: .dumbbell,
+            muscleGroups: [.biceps],
+            steelConfig: SteelConfig(
+                repRange: 10...15,
+                baseIncrement: 5.0,
+                rounding: 2.5,
+                microAdjustStep: 2.5,
+                weeklyCapPct: 7.0
+            )
+        )
+
+        let hammerCurl = Lift(
+            name: "Hammer Curl",
+            category: .pull,
+            equipment: .dumbbell,
+            muscleGroups: [.biceps],
+            steelConfig: SteelConfig(
+                repRange: 10...15,
+                baseIncrement: 5.0,
+                rounding: 2.5,
+                microAdjustStep: 2.5,
+                weeklyCapPct: 7.0
+            )
+        )
+
+        // LEG DAY LIFTS
         let squat = Lift(
             name: "Barbell Squat",
             category: .legs,
@@ -882,18 +967,72 @@ public class SessionManager {
             )
         )
 
-        let romanianDeadlift = Lift(
-            name: "Romanian Deadlift",
+        let weightedLunges = Lift(
+            name: "Weighted Lunges",
             category: .legs,
-            equipment: .barbell,
-            muscleGroups: [.hamstrings, .glutes],
+            equipment: .dumbbell,
+            muscleGroups: [.quads, .glutes],
             steelConfig: SteelConfig(
                 repRange: 8...12,
+                baseIncrement: 5.0,
+                rounding: 2.5,
+                microAdjustStep: 2.5,
+                weeklyCapPct: 7.0
+            )
+        )
+
+        let legPress = Lift(
+            name: "Leg Press",
+            category: .legs,
+            equipment: .machine,
+            muscleGroups: [.quads, .glutes],
+            steelConfig: SteelConfig(
+                repRange: 10...15,
                 baseIncrement: 10.0,
                 rounding: 5.0,
                 microAdjustStep: 5.0,
-                weeklyCapPct: 10.0,
-                plateOptions: [45, 25, 10, 5, 2.5]
+                weeklyCapPct: 10.0
+            )
+        )
+
+        let calfRaises = Lift(
+            name: "Calf Raises",
+            category: .legs,
+            equipment: .machine,
+            muscleGroups: [.calves],
+            steelConfig: SteelConfig(
+                repRange: 12...20,
+                baseIncrement: 5.0,
+                rounding: 2.5,
+                microAdjustStep: 2.5,
+                weeklyCapPct: 7.0
+            )
+        )
+
+        // CARDIO LIFTS (using STEEL with time/distance tracking)
+        let run = Lift(
+            name: "2 Mile Run",
+            category: .cardio,
+            equipment: .cardioMachine,
+            muscleGroups: [.core],
+            steelConfig: SteelConfig(
+                repRange: 1...1,  // 1 "rep" = complete the run
+                baseIncrement: 0,  // Time-based, not weight
+                rounding: 1.0,
+                weeklyCapPct: 0
+            )
+        )
+
+        let row = Lift(
+            name: "20 Min Row",
+            category: .cardio,
+            equipment: .cardioMachine,
+            muscleGroups: [.back, .core],
+            steelConfig: SteelConfig(
+                repRange: 1...1,  // 1 "rep" = complete the row
+                baseIncrement: 0,  // Time-based, not weight
+                rounding: 1.0,
+                weeklyCapPct: 0
             )
         )
 
@@ -902,37 +1041,54 @@ public class SessionManager {
             name: "Push Day",
             workoutType: .push,
             exercises: [
+                // Core lifts
                 WorkoutExercise(lift: benchPress, order: 1, priority: .core, targetSets: 3, restTime: 180),
-                WorkoutExercise(lift: overheadPress, order: 2, priority: .accessory, targetSets: 3, restTime: 120)
+                WorkoutExercise(lift: inclineDumbbellBench, order: 2, priority: .core, targetSets: 3, restTime: 150),
+                // Accessories
+                WorkoutExercise(lift: cableFly, order: 3, priority: .accessory, targetSets: 3, restTime: 90),
+                WorkoutExercise(lift: tricepPushdown, order: 4, priority: .accessory, targetSets: 3, restTime: 90),
+                WorkoutExercise(lift: skullcrushers, order: 5, priority: .accessory, targetSets: 3, restTime: 90)
             ],
-            estimatedDuration: 45 * 60
+            estimatedDuration: 60 * 60
         )
 
         let pullDay = WorkoutTemplate(
             name: "Pull Day",
             workoutType: .pull,
             exercises: [
+                // Core lifts
                 WorkoutExercise(lift: pullups, order: 1, priority: .core, targetSets: 3, restTime: 180),
-                WorkoutExercise(lift: barbellRow, order: 2, priority: .core, targetSets: 3, restTime: 120)
+                WorkoutExercise(lift: latPulldown, order: 2, priority: .core, targetSets: 3, restTime: 150),
+                WorkoutExercise(lift: barbellRow, order: 3, priority: .core, targetSets: 3, restTime: 150),
+                // Accessories
+                WorkoutExercise(lift: dumbbellCurl, order: 4, priority: .accessory, targetSets: 3, restTime: 90),
+                WorkoutExercise(lift: hammerCurl, order: 5, priority: .accessory, targetSets: 3, restTime: 90)
             ],
-            estimatedDuration: 45 * 60
+            estimatedDuration: 60 * 60
         )
 
         let legDay = WorkoutTemplate(
             name: "Leg Day",
             workoutType: .legs,
             exercises: [
+                // Core lifts
                 WorkoutExercise(lift: squat, order: 1, priority: .core, targetSets: 4, restTime: 180),
-                WorkoutExercise(lift: romanianDeadlift, order: 2, priority: .core, targetSets: 3, restTime: 120)
+                WorkoutExercise(lift: weightedLunges, order: 2, priority: .core, targetSets: 3, restTime: 150),
+                // Accessories
+                WorkoutExercise(lift: legPress, order: 3, priority: .accessory, targetSets: 3, restTime: 120),
+                WorkoutExercise(lift: calfRaises, order: 4, priority: .accessory, targetSets: 4, restTime: 60)
             ],
             estimatedDuration: 60 * 60
         )
 
-        // Simple cardio placeholder
         let cardioDay = WorkoutTemplate(
             name: "Cardio Day",
             workoutType: .cardio,
-            exercises: [],
+            exercises: [
+                // Choose one cardio option per session
+                WorkoutExercise(lift: run, order: 1, priority: .core, targetSets: 1, restTime: 0)
+                // Alternative: WorkoutExercise(lift: row, order: 1, priority: .core, targetSets: 1, restTime: 0)
+            ],
             estimatedDuration: 30 * 60
         )
 
