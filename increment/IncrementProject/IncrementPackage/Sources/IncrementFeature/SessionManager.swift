@@ -786,11 +786,8 @@ public class SessionManager {
     private func loadDefaultWorkoutCycle() {
         AppLogger.session.debug("Initializing workout cycle with dynamic generation")
 
-        // Initialize empty cycle - templates will be generated on-demand
-        workoutCycle = WorkoutCycle(
-            templates: [],  // Empty - we'll generate dynamically
-            lastCompletedType: nil
-        )
+        // Initialize cycle - templates are generated on-demand
+        workoutCycle = WorkoutCycle(lastCompletedType: nil)
 
         AppLogger.session.info("Workout cycle initialized for dynamic generation")
     }

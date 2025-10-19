@@ -79,9 +79,11 @@ public enum SessionDecision: String, Codable, Sendable {
 
 // MARK: - ExerciseProfile
 
-public struct ExerciseProfile: Codable, Identifiable, Sendable {
-    public let id: UUID
-    public let name: String
+/// Runtime configuration for STEEL progression engine
+/// Note: Keyed by exercise ID (from Lift.id) in dictionaries, not by this struct's properties
+public struct ExerciseProfile: Codable, Sendable, Identifiable {
+    public var id: String { name }  // Identifiable conformance using name
+    public let name: String  // Display name (e.g., "Barbell Bench Press")
     public let category: ExerciseCategory
     public let priority: ExercisePriority
     public let repRange: ClosedRange<Int>
@@ -95,7 +97,6 @@ public struct ExerciseProfile: Codable, Identifiable, Sendable {
     public let defaultRestSec: Int
 
     public init(
-        id: UUID = UUID(),
         name: String,
         category: ExerciseCategory,
         priority: ExercisePriority,
@@ -109,7 +110,6 @@ public struct ExerciseProfile: Codable, Identifiable, Sendable {
         warmupRule: String = "ramped_2",
         defaultRestSec: Int
     ) {
-        self.id = id
         self.name = name
         self.category = category
         self.priority = priority
@@ -391,25 +391,12 @@ public struct WorkoutTemplate: Codable, Identifiable, Sendable {
     }
 }
 
-/// Manages the 4-day workout cycle (Push -> Pull -> Legs -> Cardio)
+/// Tracks the workout rotation (Push -> Pull -> Legs -> Cardio)
 public struct WorkoutCycle: Codable, Sendable {
-    public let templates: [WorkoutTemplate]  // [Push, Pull, Legs, Cardio]
     public var lastCompletedType: LiftCategory?
 
-    public init(templates: [WorkoutTemplate], lastCompletedType: LiftCategory? = nil) {
-        self.templates = templates
+    public init(lastCompletedType: LiftCategory? = nil) {
         self.lastCompletedType = lastCompletedType
-    }
-
-    /// Returns the next workout in the cycle
-    public func nextWorkout() -> WorkoutTemplate? {
-        guard let last = lastCompletedType,
-              let nextType = LiftCategory.allCases.first(where: { $0 == last })?.next else {
-            // First workout, start with push
-            return templates.first { $0.workoutType == .push }
-        }
-
-        return templates.first { $0.workoutType == nextType }
     }
 
     /// Updates the cycle after completing a workout
