@@ -1,7 +1,6 @@
 import Foundation
 
 /// Utilities to convert between new workout models and existing STEEL models
-@MainActor
 struct WorkoutTemplateConverter {
 
     /// Converts a Lift to an ExerciseProfile (maintaining STEEL compatibility)

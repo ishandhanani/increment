@@ -121,43 +121,40 @@ public class SteelProgressionEngine {
     public static func computeNextSessionWeight(
         lastStartLoad: Double,
         decision: SessionDecision,
-        baseIncrement: Double,
-        rounding: Double,
-        weeklyCapPct: Double,
-        recentLoads: [Double],  // Loads from last 7 days
-        plateOptions: [Double]?
+        config: SteelConfig,
+        recentLoads: [Double]  // Loads from last 7 days
     ) -> NextSessionResult {
         var W0 = lastStartLoad
 
         // Apply decision
         switch decision {
         case .up_2:
-            W0 += 2 * baseIncrement
+            W0 += 2 * config.baseIncrement
         case .up_1:
-            W0 += baseIncrement
+            W0 += config.baseIncrement
         case .down_1:
-            W0 -= baseIncrement
+            W0 -= config.baseIncrement
         case .hold:
             break
         }
 
         // Round
-        W0 = round(W0, to: rounding)
+        W0 = round(W0, to: config.rounding)
 
         // Weekly cap check
         let weeklyIncrease = W0 - (recentLoads.min() ?? lastStartLoad)
-        let maxAllowedIncrease = lastStartLoad * (weeklyCapPct / 100.0)
+        let maxAllowedIncrease = lastStartLoad * (config.weeklyCapPct / 100.0)
 
         var reason = decisionReason(decision)
 
         if weeklyIncrease > maxAllowedIncrease {
             W0 = lastStartLoad + maxAllowedIncrease
-            W0 = round(W0, to: rounding)
+            W0 = round(W0, to: config.rounding)
             reason = "Weekly cap applied"
         }
 
         // Plate math for barbells
-        if let plates = plateOptions {
+        if let plates = config.plateOptions {
             W0 = roundToPlates(W0, plates: plates, barWeight: 45.0)
         }
 

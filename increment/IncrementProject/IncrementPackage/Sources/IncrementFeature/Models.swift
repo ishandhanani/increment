@@ -211,15 +211,14 @@ public struct PreWorkoutFeeling: Codable, Sendable {
 public struct Session: Codable, Identifiable, Sendable {
     public let id: UUID
     public let date: Date
-    public let workoutPlanId: UUID
     public var preWorkoutFeeling: PreWorkoutFeeling?
     public var exerciseLogs: [ExerciseSessionLog]
     public var stats: SessionStats
     public var synced: Bool
 
-    // Session-scoped workout data (generated from template once per session)
-    public var workoutPlan: WorkoutPlan?  // The generated plan for this session
-    public var exerciseProfilesForSession: [UUID: ExerciseProfile]?  // Exercise profiles for this session
+    // Session-scoped workout data (stored template for this session)
+    public var workoutTemplate: WorkoutTemplate?
+    public var exerciseProfilesForSession: [UUID: ExerciseProfile]?  // Still needed for STEEL lookup
 
     // Resume state fields
     public var isActive: Bool
@@ -229,15 +228,27 @@ public struct Session: Codable, Identifiable, Sendable {
     public var currentExerciseLog: ExerciseSessionLog?  // In-progress exercise log
     public var lastUpdated: Date
 
+    // Deprecated - kept for backward compatibility during migration
+    @available(*, deprecated, message: "Use workoutTemplate instead")
+    public var workoutPlanId: UUID {
+        workoutTemplate?.id ?? UUID()
+    }
+
+    @available(*, deprecated, message: "Use workoutTemplate instead")
+    public var workoutPlan: WorkoutPlan? {
+        guard let template = workoutTemplate else { return nil }
+        let (plan, _) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
+        return plan
+    }
+
     public init(
         id: UUID = UUID(),
         date: Date = Date(),
-        workoutPlanId: UUID,
         preWorkoutFeeling: PreWorkoutFeeling? = nil,
         exerciseLogs: [ExerciseSessionLog] = [],
         stats: SessionStats = SessionStats(totalVolume: 0),
         synced: Bool = false,
-        workoutPlan: WorkoutPlan? = nil,
+        workoutTemplate: WorkoutTemplate? = nil,
         exerciseProfilesForSession: [UUID: ExerciseProfile]? = nil,
         isActive: Bool = true,
         currentExerciseIndex: Int? = nil,
@@ -248,12 +259,11 @@ public struct Session: Codable, Identifiable, Sendable {
     ) {
         self.id = id
         self.date = date
-        self.workoutPlanId = workoutPlanId
         self.preWorkoutFeeling = preWorkoutFeeling
         self.exerciseLogs = exerciseLogs
         self.stats = stats
         self.synced = synced
-        self.workoutPlan = workoutPlan
+        self.workoutTemplate = workoutTemplate
         self.exerciseProfilesForSession = exerciseProfilesForSession
         self.isActive = isActive
         self.currentExerciseIndex = currentExerciseIndex
