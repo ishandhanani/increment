@@ -15,7 +15,7 @@ struct ExerciseProgressView: View {
                 if !sessionManager.exercisesPerformed.isEmpty {
                     ExerciseSelector(
                         exercises: sessionManager.exercisesPerformed,
-                        selectedName: $selectedExerciseId
+                        selectedId: $selectedExerciseId
                     )
 
                     // Progression Chart
@@ -39,10 +39,10 @@ struct ExerciseProgressView: View {
             .padding(24)
         }
         .onAppear {
-            // Select first exercise by default
+            // Select first exercise by default (using exercise ID)
             if selectedExerciseId == nil,
-               let firstExercise = sessionManager.exercisesPerformed.first {
-                selectedExerciseId = firstExercise.name
+               let firstExerciseId = sessionManager.exercisesPerformed.first?.id {
+                selectedExerciseId = firstExerciseId
             }
         }
     }
@@ -52,7 +52,7 @@ struct ExerciseProgressView: View {
 
 struct ExerciseSelector: View {
     let exercises: [ExerciseProfile]
-    @Binding var selectedName: String?
+    @Binding var selectedId: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -63,12 +63,12 @@ struct ExerciseSelector: View {
             Menu {
                 ForEach(exercises) { exercise in
                     Button(exercise.name) {
-                        selectedName = exercise.name
+                        selectedId = exercise.id
                     }
                 }
             } label: {
                 HStack {
-                    if let selected = exercises.first(where: { $0.name == selectedName }) {
+                    if let selected = exercises.first(where: { $0.id == selectedId }) {
                         Text(selected.name)
                     } else {
                         Text("Select Exercise")
@@ -98,6 +98,7 @@ struct ExerciseSelector: View {
 
 struct ProgressionChart: View {
     let progression: [ExerciseProgress]
+    @State private var selectedDate: Date?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -109,12 +110,28 @@ struct ProgressionChart: View {
                 EmptyProgressionMessage()
             } else {
                 Chart(progression) { dataPoint in
+                    // Area fill under line
+                    AreaMark(
+                        x: .value("Date", dataPoint.date),
+                        yStart: .value("Min", progression.map { $0.weight }.min() ?? 0),
+                        yEnd: .value("Weight", dataPoint.weight)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.white.opacity(0.15), .white.opacity(0.02)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .interpolationMethod(.catmullRom)
+
                     // Line
                     LineMark(
                         x: .value("Date", dataPoint.date),
                         y: .value("Weight", dataPoint.weight)
                     )
                     .foregroundStyle(.white)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5))
                     .interpolationMethod(.catmullRom)
 
                     // Points with decision colors
@@ -123,8 +140,24 @@ struct ProgressionChart: View {
                         y: .value("Weight", dataPoint.weight)
                     )
                     .foregroundStyle(colorForDecision(dataPoint.decision))
-                    .symbolSize(60)
+                    .symbolSize(
+                        selectedDate != nil && Calendar.current.isDate(dataPoint.date, inSameDayAs: selectedDate!)
+                            ? 120
+                            : 70
+                    )
+
+                    // Selection indicator
+                    if let selectedDate = selectedDate,
+                       Calendar.current.isDate(dataPoint.date, inSameDayAs: selectedDate) {
+                        PointMark(
+                            x: .value("Date", dataPoint.date),
+                            y: .value("Weight", dataPoint.weight)
+                        )
+                        .foregroundStyle(.white)
+                        .symbolSize(40)
+                    }
                 }
+                .chartXSelection(value: $selectedDate)
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                         AxisValueLabel()
@@ -133,22 +166,34 @@ struct ProgressionChart: View {
                     }
                 }
                 .chartYAxis {
-                    AxisMarks { _ in
-                        AxisValueLabel()
-                            .foregroundStyle(.white.opacity(0.5))
-                            .font(.system(.caption2, design: .monospaced))
+                    AxisMarks(position: .leading) { value in
+                        AxisValueLabel {
+                            if let weight = value.as(Double.self) {
+                                Text("\(Int(weight)) lb")
+                                    .font(.system(.caption2, design: .monospaced))
+                            }
+                        }
+                        .foregroundStyle(.white.opacity(0.5))
                     }
                 }
-                .frame(height: 200)
+                .frame(height: 220)
                 .padding(16)
                 .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.white.opacity(0.05))
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.white.opacity(0.03))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
+
+                // Selection details
+                if let selectedDate = selectedDate,
+                   let selectedProgress = progression.first(where: {
+                       Calendar.current.isDate($0.date, inSameDayAs: selectedDate)
+                   }) {
+                    ProgressDetailCard(progress: selectedProgress)
+                }
 
                 // Legend
                 DecisionLegend()
@@ -164,6 +209,97 @@ struct ProgressionChart: View {
             return .white.opacity(0.5)
         case .down_1:
             return .red.opacity(0.8)
+        }
+    }
+}
+
+// MARK: - Progress Detail Card
+
+struct ProgressDetailCard: View {
+    let progress: ExerciseProgress
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("WORKOUT DETAILS")
+                    .font(.system(.caption, design: .monospaced))
+                    .fontWeight(.bold)
+                    .foregroundColor(colorForDecision(progress.decision))
+
+                Spacer()
+
+                Text(formatDate(progress.date))
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+
+            Divider()
+                .background(Color.white.opacity(0.2))
+
+            HStack(spacing: 16) {
+                StatItem(label: "Weight", value: "\(Int(progress.weight)) lb")
+                StatItem(label: "Sets", value: "\(progress.setCount)")
+                StatItem(label: "Avg Reps", value: String(format: "%.1f", progress.avgReps))
+                StatItem(label: "Decision", value: decisionLabel(progress.decision))
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(colorForDecision(progress.decision).opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(colorForDecision(progress.decision).opacity(0.3), lineWidth: 1)
+        )
+    }
+
+    private func colorForDecision(_ decision: SessionDecision) -> Color {
+        switch decision {
+        case .up_2, .up_1:
+            return .green
+        case .hold:
+            return .white
+        case .down_1:
+            return .red
+        }
+    }
+
+    private func decisionLabel(_ decision: SessionDecision) -> String {
+        switch decision {
+        case .up_2:
+            return "UP +2"
+        case .up_1:
+            return "UP +1"
+        case .hold:
+            return "HOLD"
+        case .down_1:
+            return "DOWN -1"
+        }
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - Stat Item
+
+struct StatItem: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundColor(.white.opacity(0.6))
+            Text(value)
+                .font(.system(.caption, design: .monospaced))
+                .fontWeight(.bold)
+                .foregroundColor(.white)
         }
     }
 }

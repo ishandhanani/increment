@@ -7,6 +7,7 @@ import Charts
 public struct AnalyticsView: View {
     @Environment(SessionManager.self) private var sessionManager
     @Binding var isPresented: Bool
+    @State private var selectedTab: AnalyticsTab = .overview
 
     public init(isPresented: Binding<Bool>) {
         self._isPresented = isPresented
@@ -31,35 +32,34 @@ public struct AnalyticsView: View {
 
                 Spacer()
 
-                Text("Analytics")
-                    .font(.system(.title2, design: .monospaced))
+                Text("ANALYTICS")
+                    .font(.system(.title3, design: .monospaced))
                     .fontWeight(.bold)
                     .foregroundColor(.white)
             }
             .padding(20)
             .background(Color.black.opacity(0.3))
 
-            // Analytics content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 32) {
-                    // Quick Stats Grid
-                    QuickStatsGrid(stats: sessionManager.overviewStats)
-
-                    // Recent Trend Chart
-                    if !sessionManager.overviewStats.recentTrend.isEmpty {
-                        RecentTrendChart(trend: sessionManager.overviewStats.recentTrend)
-                    }
-
-                    // Insights Section
-                    if !sessionManager.performanceInsights.isEmpty {
-                        InsightsSection(insights: sessionManager.performanceInsights)
-                    }
+            // Tab Navigation
+            HStack(spacing: 0) {
+                TabButton(title: "OVERVIEW", isSelected: selectedTab == .overview) {
+                    selectedTab = .overview
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .padding(24)
+                TabButton(title: "EXERCISES", isSelected: selectedTab == .exercises) {
+                    selectedTab = .exercises
+                }
             }
+            .background(Color.black.opacity(0.2))
 
-            Spacer()
+            // Tab Content
+            Group {
+                switch selectedTab {
+                case .overview:
+                    OverviewDashboardView()
+                case .exercises:
+                    ExerciseProgressView()
+                }
+            }
         }
     }
 }
@@ -133,7 +133,7 @@ struct QuickStatsGrid: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Overview")
+            Text("OVERVIEW")
                 .font(.system(.body, design: .monospaced))
                 .fontWeight(.bold)
                 .foregroundColor(.white)
@@ -141,24 +141,24 @@ struct QuickStatsGrid: View {
             LazyVGrid(columns: [
                 GridItem(.flexible()),
                 GridItem(.flexible())
-            ], spacing: 16) {
+            ], spacing: 12) {
                 StatCard(
-                    title: "Sessions",
+                    title: "Total Sessions",
                     value: "\(stats.totalSessions)"
                 )
 
                 StatCard(
-                    title: "Volume",
+                    title: "Total Volume",
                     value: formatVolume(stats.totalVolume)
                 )
 
                 StatCard(
-                    title: "Streak",
-                    value: "\(stats.currentStreak) days"
+                    title: "Current Streak",
+                    value: "\(stats.currentStreak) day\(stats.currentStreak == 1 ? "" : "s")"
                 )
 
                 StatCard(
-                    title: "Avg lift",
+                    title: "Avg Lift Weight",
                     value: "\(Int(stats.averageLift)) lb"
                 )
             }
@@ -210,58 +210,108 @@ struct RecentTrendChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Volume trend (30 days)")
+            Text("VOLUME TREND (30 DAYS)")
                 .font(.system(.body, design: .monospaced))
                 .fontWeight(.bold)
                 .foregroundColor(.white)
 
-            Chart(trend) { dataPoint in
-                LineMark(
-                    x: .value("Date", dataPoint.date),
-                    y: .value("Volume", dataPoint.volume)
-                )
-                .foregroundStyle(.white)
-                .lineStyle(StrokeStyle(lineWidth: 2))
-                .interpolationMethod(.catmullRom)
-
-                AreaMark(
-                    x: .value("Date", dataPoint.date),
-                    y: .value("Volume", dataPoint.volume)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.white.opacity(0.2), .white.opacity(0.02)],
-                        startPoint: .top,
-                        endPoint: .bottom
+            if trend.isEmpty {
+                EmptyChartMessageView(message: "No workout data yet")
+            } else {
+                Chart(trend) { dataPoint in
+                    LineMark(
+                        x: .value("Date", dataPoint.date),
+                        y: .value("Volume", dataPoint.volume)
                     )
+                    .foregroundStyle(.white)
+                    .lineStyle(StrokeStyle(lineWidth: 3))
+                    .interpolationMethod(.catmullRom)
+
+                    AreaMark(
+                        x: .value("Date", dataPoint.date),
+                        y: .value("Volume", dataPoint.volume)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.white.opacity(0.3), .white.opacity(0.05)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .interpolationMethod(.catmullRom)
+
+                    PointMark(
+                        x: .value("Date", dataPoint.date),
+                        y: .value("Volume", dataPoint.volume)
+                    )
+                    .foregroundStyle(.white)
+                    .symbolSize(50)
+                }
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                        AxisValueLabel()
+                            .foregroundStyle(.white.opacity(0.5))
+                            .font(.system(.caption2, design: .monospaced))
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        AxisValueLabel {
+                            if let volume = value.as(Double.self) {
+                                Text(formatVolume(volume))
+                                    .font(.system(.caption2, design: .monospaced))
+                            }
+                        }
+                        .foregroundStyle(.white.opacity(0.5))
+                    }
+                }
+                .frame(height: 200)
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.white.opacity(0.03))
                 )
-                .interpolationMethod(.catmullRom)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                )
             }
-            .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: 4)) { _ in
-                    AxisValueLabel()
-                        .foregroundStyle(.white.opacity(0.4))
-                        .font(.system(.caption2, design: .monospaced))
-                }
-            }
-            .chartYAxis {
-                AxisMarks(position: .leading) { _ in
-                    AxisValueLabel()
-                        .foregroundStyle(.white.opacity(0.4))
-                        .font(.system(.caption2, design: .monospaced))
-                }
-            }
-            .frame(height: 180)
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.white.opacity(0.03))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
-            )
         }
+    }
+
+    private func formatVolume(_ volume: Double) -> String {
+        if volume >= 1000 {
+            return String(format: "%.1fK", volume / 1000)
+        }
+        return "\(Int(volume))"
+    }
+}
+
+// MARK: - Empty Chart Message View
+
+struct EmptyChartMessageView: View {
+    let message: String
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("📊")
+                .font(.system(.largeTitle))
+
+            Text(message)
+                .font(.system(.body, design: .monospaced))
+                .foregroundColor(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 180)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.white.opacity(0.03))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+        )
     }
 }
 
@@ -272,7 +322,7 @@ struct InsightsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Insights")
+            Text("INSIGHTS")
                 .font(.system(.body, design: .monospaced))
                 .fontWeight(.bold)
                 .foregroundColor(.white)

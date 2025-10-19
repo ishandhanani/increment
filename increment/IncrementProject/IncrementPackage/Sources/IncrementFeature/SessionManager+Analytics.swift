@@ -133,11 +133,13 @@ extension SessionManager {
 
     /// List of all exercises that have been performed
     public var exercisesPerformed: [ExerciseProfile] {
-        let performedNames = Set(allSessions.flatMap { session in
+        let performedIds = Set(allSessions.flatMap { session in
             session.exerciseLogs.map { $0.exerciseId }
         })
 
-        return performedNames.compactMap { exerciseProfiles[$0] }
+        return performedIds.compactMap { exerciseId in
+            exerciseProfiles[exerciseId]
+        }
     }
 
     // MARK: - Performance Insights
