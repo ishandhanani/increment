@@ -4,6 +4,12 @@ import Foundation
 /// Handles exercise selection, ordering, and configuration
 struct WorkoutBuilder {
 
+    // Stable UUIDs for built-in templates (deterministic, never change)
+    static let pushDayId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+    static let pullDayId = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+    static let legDayId = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
+    static let cardioDayId = UUID(uuidString: "00000000-0000-0000-0000-000000000004")!
+
     /// Builds a complete workout template for the given type
     /// - Parameter type: The type of workout (push, pull, legs, cardio)
     /// - Returns: A fully configured WorkoutTemplate
@@ -64,6 +70,7 @@ struct WorkoutBuilder {
         ]
 
         return WorkoutTemplate(
+            id: pushDayId,
             name: "Push Day",
             workoutType: .push,
             exercises: exercises,
@@ -115,6 +122,7 @@ struct WorkoutBuilder {
         ]
 
         return WorkoutTemplate(
+            id: pullDayId,
             name: "Pull Day",
             workoutType: .pull,
             exercises: exercises,
@@ -159,6 +167,7 @@ struct WorkoutBuilder {
         ]
 
         return WorkoutTemplate(
+            id: legDayId,
             name: "Leg Day",
             workoutType: .legs,
             exercises: exercises,
@@ -180,6 +189,7 @@ struct WorkoutBuilder {
         ]
 
         return WorkoutTemplate(
+            id: cardioDayId,
             name: "Cardio Day",
             workoutType: .cardio,
             exercises: exercises,

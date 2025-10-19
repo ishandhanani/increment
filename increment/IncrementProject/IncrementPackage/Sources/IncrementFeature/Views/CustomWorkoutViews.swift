@@ -8,8 +8,11 @@ public struct WorkoutRotationView: View {
     @State private var builtInTemplates: [WorkoutTemplate] = []
     @State private var customTemplates: [WorkoutTemplate] = []
     @State private var selectedTemplateIds: [UUID] = []
+    @State private var originalTemplateIds: [UUID] = []  // Track original state
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var isSaving = false
+    @State private var showSaveSuccess = false
 
     public init(isPresented: Binding<Bool>) {
         self._isPresented = isPresented
@@ -25,17 +28,25 @@ public struct WorkoutRotationView: View {
         }
     }
 
+    private var hasChanges: Bool {
+        selectedTemplateIds != originalTemplateIds
+    }
+
     public var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
                 Button {
+                    if hasChanges {
+                        // Reset to original
+                        selectedTemplateIds = originalTemplateIds
+                    }
                     isPresented = false
                 } label: {
                     HStack(spacing: 6) {
                         Text("←")
                             .font(.system(.body, design: .monospaced))
-                        Text("Back")
+                        Text(hasChanges ? "Cancel" : "Back")
                             .font(.system(.body, design: .monospaced))
                     }
                     .foregroundColor(.white.opacity(0.7))
@@ -45,21 +56,50 @@ public struct WorkoutRotationView: View {
 
                 Spacer()
 
-                Button {
-                    Task {
-                        do {
-                            try await DatabaseManager.shared.saveWorkoutRotation(selectedTemplateIds)
-                        } catch {
-                            errorMessage = error.localizedDescription
+                if showSaveSuccess {
+                    Text("Saved")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.green)
+                        .transition(.opacity)
+                }
+
+                if hasChanges {
+                    Button {
+                        Task {
+                            isSaving = true
+                            errorMessage = nil
+                            do {
+                                try await DatabaseManager.shared.saveWorkoutRotation(selectedTemplateIds)
+                                originalTemplateIds = selectedTemplateIds
+
+                                // Show success message briefly
+                                withAnimation {
+                                    showSaveSuccess = true
+                                }
+                                try? await Task.sleep(for: .seconds(1.5))
+                                withAnimation {
+                                    showSaveSuccess = false
+                                }
+                            } catch {
+                                errorMessage = error.localizedDescription
+                            }
+                            isSaving = false
+                        }
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                                .tint(.white)
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Save")
+                                .font(.system(.body, design: .monospaced))
+                                .foregroundColor(.white)
                         }
                     }
-                } label: {
-                    Text("Save")
-                        .font(.system(.body, design: .monospaced))
-                        .foregroundColor(.white)
+                    .buttonStyle(.plain)
+                    .disabled(isSaving)
+                    .padding(20)
                 }
-                .buttonStyle(.plain)
-                .padding(20)
             }
 
             if isLoading {
@@ -230,7 +270,7 @@ public struct WorkoutRotationView: View {
         errorMessage = nil
 
         do {
-            // Load built-in templates (generated from WorkoutBuilder)
+            // Load built-in templates (now with stable IDs)
             builtInTemplates = [
                 WorkoutBuilder.build(type: .push),
                 WorkoutBuilder.build(type: .pull),
@@ -244,9 +284,11 @@ public struct WorkoutRotationView: View {
             // Load saved rotation
             if let savedIds = try await DatabaseManager.shared.loadWorkoutRotation() {
                 selectedTemplateIds = savedIds
+                originalTemplateIds = savedIds  // Track original state
             } else {
                 // Default to built-in rotation if nothing saved
                 selectedTemplateIds = builtInTemplates.map { $0.id }
+                originalTemplateIds = selectedTemplateIds  // Track original state
             }
         } catch {
             errorMessage = error.localizedDescription
