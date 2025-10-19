@@ -5,28 +5,46 @@ import OSLog
 struct IntroView: View {
     @Environment(SessionManager.self) private var sessionManager
     @Binding var showAnalytics: Bool
+    @Binding var showSettings: Bool
     @State private var showResumePrompt = false
 
     var body: some View {
         VStack(spacing: 24) {
             Spacer()
 
-            // Terminal panel
-            VStack(alignment: .leading, spacing: 8) {
-                Text("INCREMENT")
-                    .font(.system(.largeTitle, design: .monospaced))
-                    .fontWeight(.bold)
+            // Terminal panel with settings button
+            VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("INCREMENT")
+                                .font(.system(.largeTitle, design: .monospaced))
+                                .fontWeight(.bold)
 
-                Text("Terminal-inspired lifting tracker")
-                    .font(.system(.body, design: .monospaced))
-                    .opacity(0.7)
+                            Text("Terminal-inspired lifting tracker")
+                                .font(.system(.body, design: .monospaced))
+                                .opacity(0.7)
+                        }
+
+                        Spacer()
+
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Text("⚙")
+                                .font(.system(.title2))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(24)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(24)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-            )
             .padding(.horizontal, 24)
 
             Spacer()

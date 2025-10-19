@@ -118,7 +118,7 @@ struct ProgressionChart: View {
                     )
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.white.opacity(0.15), .white.opacity(0.02)],
+                            colors: [Color.purple.opacity(0.35), Color.purple.opacity(0.05)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -130,8 +130,8 @@ struct ProgressionChart: View {
                         x: .value("Date", dataPoint.date),
                         y: .value("Weight", dataPoint.weight)
                     )
-                    .foregroundStyle(.white)
-                    .lineStyle(StrokeStyle(lineWidth: 2.5))
+                    .foregroundStyle(Color.purple.opacity(0.9))
+                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
                     .interpolationMethod(.catmullRom)
 
                     // Points with decision colors
@@ -142,49 +142,57 @@ struct ProgressionChart: View {
                     .foregroundStyle(colorForDecision(dataPoint.decision))
                     .symbolSize(
                         selectedDate != nil && Calendar.current.isDate(dataPoint.date, inSameDayAs: selectedDate!)
-                            ? 120
-                            : 70
+                            ? 140
+                            : 80
                     )
 
-                    // Selection indicator
+                    // Selection indicator ring
                     if let selectedDate = selectedDate,
                        Calendar.current.isDate(dataPoint.date, inSameDayAs: selectedDate) {
                         PointMark(
                             x: .value("Date", dataPoint.date),
                             y: .value("Weight", dataPoint.weight)
                         )
-                        .foregroundStyle(.white)
-                        .symbolSize(40)
+                        .foregroundStyle(.clear)
+                        .symbolSize(180)
+                        .symbol {
+                            Circle()
+                                .strokeBorder(Color.white.opacity(0.5), lineWidth: 2)
+                        }
                     }
                 }
                 .chartXSelection(value: $selectedDate)
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(.white.opacity(0.1))
                         AxisValueLabel()
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(.white.opacity(0.6))
                             .font(.system(.caption2, design: .monospaced))
                     }
                 }
                 .chartYAxis {
                     AxisMarks(position: .leading) { value in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(.white.opacity(0.1))
                         AxisValueLabel {
                             if let weight = value.as(Double.self) {
                                 Text("\(Int(weight)) lb")
                                     .font(.system(.caption2, design: .monospaced))
                             }
                         }
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.white.opacity(0.6))
                     }
                 }
-                .frame(height: 220)
-                .padding(16)
+                .frame(height: 260)
+                .padding(20)
                 .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.white.opacity(0.03))
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.white.opacity(0.04))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 )
 
                 // Selection details
