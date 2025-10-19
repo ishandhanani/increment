@@ -53,7 +53,7 @@ public class SessionManager {
     public init() {
         loadDefaultExercises()
         loadDefaultWorkoutPlan()
-        loadDefaultWorkoutTemplates()
+        loadDefaultWorkoutCycle()
         loadPersistedState()
     }
 
@@ -284,32 +284,18 @@ public class SessionManager {
     // MARK: - Session Control
 
     public func startSession() {
-        print("🎯 startSession() called - using new template system")
+        print("🎯 startSession() called - using dynamic generation system")
 
         // Reset session state
         currentExerciseIndex = 0
         currentSetIndex = 0
         isFirstExercise = true
 
-        // Get next workout from cycle
-        guard let nextWorkout = workoutCycle?.nextWorkout() else {
-            print("🎯 ERROR: No workout cycle available!")
-            return
-        }
+        // Don't generate template yet - will happen in logPreWorkoutFeeling()
+        print("🎯 Session initialized - workout will be dynamically generated")
 
-        print("🎯 ========================================")
-        print("🎯 Next workout: \(nextWorkout.name)")
-        print("🎯 Workout type: \(nextWorkout.workoutType)")
-        print("🎯 Number of exercises: \(nextWorkout.exercises.count)")
-        for (idx, ex) in nextWorkout.exercises.enumerated() {
-            print("🎯   Exercise \(idx + 1): \(ex.lift.name) (\(ex.priority))")
-        }
-        print("🎯 ========================================")
-
-        currentWorkoutTemplate = nextWorkout
-
-        // Create a temporary session (will be properly initialized after template conversion)
-        currentSession = Session(workoutPlanId: nextWorkout.id)
+        // Create a temporary session (UUID will be replaced when template is generated)
+        currentSession = Session(workoutPlanId: UUID())
 
         // Show pre-workout feeling screen
         sessionState = .preWorkout
@@ -323,9 +309,14 @@ public class SessionManager {
 
     public func logPreWorkoutFeeling(_ feeling: PreWorkoutFeeling) {
         currentSession?.preWorkoutFeeling = feeling
-        persistSession()
 
-        // Go to workout overview (template already set in startSession)
+        // Dynamically generate next workout based on cycle
+        let nextType = workoutCycle?.lastCompletedType?.next ?? .push
+        print("🏗️ Dynamically generating workout: \(nextType.rawValue)")
+        currentWorkoutTemplate = WorkoutBuilder.build(type: nextType)
+        print("🏗️ Generated template: \(currentWorkoutTemplate?.name ?? "nil")")
+
+        persistSession()
         sessionState = .workoutOverview
     }
 
@@ -337,9 +328,26 @@ public class SessionManager {
         // Convert template to WorkoutPlan + ExerciseProfiles ONCE for this session
         let (plan, profiles) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
 
-        // Store in SESSION-SCOPED storage (not global dictionaries)
-        currentSession?.workoutPlan = plan
-        currentSession?.exerciseProfilesForSession = profiles
+        // Create a new session with the correct workoutPlanId
+        if let oldSession = currentSession {
+            currentSession = Session(
+                id: oldSession.id,
+                date: oldSession.date,
+                workoutPlanId: plan.id,  // Use the generated plan's ID
+                preWorkoutFeeling: oldSession.preWorkoutFeeling,
+                exerciseLogs: oldSession.exerciseLogs,
+                stats: oldSession.stats,
+                synced: oldSession.synced,
+                workoutPlan: plan,
+                exerciseProfilesForSession: profiles,
+                isActive: oldSession.isActive,
+                currentExerciseIndex: oldSession.currentExerciseIndex,
+                currentSetIndex: oldSession.currentSetIndex,
+                sessionStateRaw: oldSession.sessionStateRaw,
+                currentExerciseLog: oldSession.currentExerciseLog,
+                lastUpdated: Date()
+            )
+        }
 
         // Also populate the working dictionaries for this session
         exerciseProfiles = profiles
@@ -804,301 +812,16 @@ public class SessionManager {
         print("📋 loadDefaultWorkoutPlan() skipped - using workout templates")
     }
 
-    private func loadDefaultWorkoutTemplates() {
-        print("📋 loadDefaultWorkoutTemplates() called")
+    private func loadDefaultWorkoutCycle() {
+        print("📋 loadDefaultWorkoutCycle() called - using dynamic generation")
 
-        // PUSH DAY LIFTS
-        let benchPress = Lift(
-            name: "Barbell Bench Press",
-            category: .push,
-            equipment: .barbell,
-            muscleGroups: [.chest, .triceps, .shoulders],
-            steelConfig: SteelConfig(
-                repRange: 5...8,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 5.0,
-                plateOptions: [45, 25, 10, 5, 2.5]
-            )
-        )
-
-        let inclineDumbbellBench = Lift(
-            name: "Incline Dumbbell Bench",
-            category: .push,
-            equipment: .dumbbell,
-            muscleGroups: [.chest, .shoulders],
-            steelConfig: SteelConfig(
-                repRange: 8...12,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 7.0
-            )
-        )
-
-        let cableFly = Lift(
-            name: "Cable Fly",
-            category: .push,
-            equipment: .cable,
-            muscleGroups: [.chest],
-            steelConfig: SteelConfig(
-                repRange: 10...15,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 7.0
-            )
-        )
-
-        let tricepPushdown = Lift(
-            name: "Tricep Pushdown",
-            category: .push,
-            equipment: .cable,
-            muscleGroups: [.triceps],
-            steelConfig: SteelConfig(
-                repRange: 10...15,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 7.0
-            )
-        )
-
-        let skullcrushers = Lift(
-            name: "Skullcrushers",
-            category: .push,
-            equipment: .barbell,
-            muscleGroups: [.triceps],
-            steelConfig: SteelConfig(
-                repRange: 8...12,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 5.0
-            )
-        )
-
-        // PULL DAY LIFTS
-        let pullups = Lift(
-            name: "Weighted Pull-ups",
-            category: .pull,
-            equipment: .bodyweight,
-            muscleGroups: [.back, .biceps],
-            steelConfig: SteelConfig(
-                repRange: 5...8,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 5.0
-            )
-        )
-
-        let latPulldown = Lift(
-            name: "Lat Pulldown",
-            category: .pull,
-            equipment: .machine,
-            muscleGroups: [.back],
-            steelConfig: SteelConfig(
-                repRange: 8...12,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 7.0
-            )
-        )
-
-        let barbellRow = Lift(
-            name: "Barbell Row",
-            category: .pull,
-            equipment: .barbell,
-            muscleGroups: [.back, .biceps],
-            steelConfig: SteelConfig(
-                repRange: 6...10,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 5.0,
-                plateOptions: [45, 25, 10, 5, 2.5]
-            )
-        )
-
-        let dumbbellCurl = Lift(
-            name: "Dumbbell Curl",
-            category: .pull,
-            equipment: .dumbbell,
-            muscleGroups: [.biceps],
-            steelConfig: SteelConfig(
-                repRange: 10...15,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 7.0
-            )
-        )
-
-        let hammerCurl = Lift(
-            name: "Hammer Curl",
-            category: .pull,
-            equipment: .dumbbell,
-            muscleGroups: [.biceps],
-            steelConfig: SteelConfig(
-                repRange: 10...15,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 7.0
-            )
-        )
-
-        // LEG DAY LIFTS
-        let squat = Lift(
-            name: "Barbell Squat",
-            category: .legs,
-            equipment: .barbell,
-            muscleGroups: [.quads, .glutes, .hamstrings],
-            steelConfig: SteelConfig(
-                repRange: 5...8,
-                baseIncrement: 10.0,
-                rounding: 5.0,
-                microAdjustStep: 5.0,
-                weeklyCapPct: 10.0,
-                plateOptions: [45, 25, 10, 5, 2.5]
-            )
-        )
-
-        let weightedLunges = Lift(
-            name: "Weighted Lunges",
-            category: .legs,
-            equipment: .dumbbell,
-            muscleGroups: [.quads, .glutes],
-            steelConfig: SteelConfig(
-                repRange: 8...12,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 7.0
-            )
-        )
-
-        let legPress = Lift(
-            name: "Leg Press",
-            category: .legs,
-            equipment: .machine,
-            muscleGroups: [.quads, .glutes],
-            steelConfig: SteelConfig(
-                repRange: 10...15,
-                baseIncrement: 10.0,
-                rounding: 5.0,
-                microAdjustStep: 5.0,
-                weeklyCapPct: 10.0
-            )
-        )
-
-        let calfRaises = Lift(
-            name: "Calf Raises",
-            category: .legs,
-            equipment: .machine,
-            muscleGroups: [.calves],
-            steelConfig: SteelConfig(
-                repRange: 12...20,
-                baseIncrement: 5.0,
-                rounding: 2.5,
-                microAdjustStep: 2.5,
-                weeklyCapPct: 7.0
-            )
-        )
-
-        // CARDIO LIFTS (using STEEL with time/distance tracking)
-        let run = Lift(
-            name: "2 Mile Run",
-            category: .cardio,
-            equipment: .cardioMachine,
-            muscleGroups: [.core],
-            steelConfig: SteelConfig(
-                repRange: 1...1,  // 1 "rep" = complete the run
-                baseIncrement: 0,  // Time-based, not weight
-                rounding: 1.0,
-                weeklyCapPct: 0
-            )
-        )
-
-        let row = Lift(
-            name: "20 Min Row",
-            category: .cardio,
-            equipment: .cardioMachine,
-            muscleGroups: [.back, .core],
-            steelConfig: SteelConfig(
-                repRange: 1...1,  // 1 "rep" = complete the row
-                baseIncrement: 0,  // Time-based, not weight
-                rounding: 1.0,
-                weeklyCapPct: 0
-            )
-        )
-
-        // Create workout templates
-        let pushDay = WorkoutTemplate(
-            name: "Push Day",
-            workoutType: .push,
-            exercises: [
-                // Core lifts
-                WorkoutExercise(lift: benchPress, order: 1, priority: .core, targetSets: 3, restTime: 180),
-                WorkoutExercise(lift: inclineDumbbellBench, order: 2, priority: .core, targetSets: 3, restTime: 150),
-                // Accessories
-                WorkoutExercise(lift: cableFly, order: 3, priority: .accessory, targetSets: 3, restTime: 90),
-                WorkoutExercise(lift: tricepPushdown, order: 4, priority: .accessory, targetSets: 3, restTime: 90),
-                WorkoutExercise(lift: skullcrushers, order: 5, priority: .accessory, targetSets: 3, restTime: 90)
-            ],
-            estimatedDuration: 60 * 60
-        )
-
-        let pullDay = WorkoutTemplate(
-            name: "Pull Day",
-            workoutType: .pull,
-            exercises: [
-                // Core lifts
-                WorkoutExercise(lift: pullups, order: 1, priority: .core, targetSets: 3, restTime: 180),
-                WorkoutExercise(lift: latPulldown, order: 2, priority: .core, targetSets: 3, restTime: 150),
-                WorkoutExercise(lift: barbellRow, order: 3, priority: .core, targetSets: 3, restTime: 150),
-                // Accessories
-                WorkoutExercise(lift: dumbbellCurl, order: 4, priority: .accessory, targetSets: 3, restTime: 90),
-                WorkoutExercise(lift: hammerCurl, order: 5, priority: .accessory, targetSets: 3, restTime: 90)
-            ],
-            estimatedDuration: 60 * 60
-        )
-
-        let legDay = WorkoutTemplate(
-            name: "Leg Day",
-            workoutType: .legs,
-            exercises: [
-                // Core lifts
-                WorkoutExercise(lift: squat, order: 1, priority: .core, targetSets: 4, restTime: 180),
-                WorkoutExercise(lift: weightedLunges, order: 2, priority: .core, targetSets: 3, restTime: 150),
-                // Accessories
-                WorkoutExercise(lift: legPress, order: 3, priority: .accessory, targetSets: 3, restTime: 120),
-                WorkoutExercise(lift: calfRaises, order: 4, priority: .accessory, targetSets: 4, restTime: 60)
-            ],
-            estimatedDuration: 60 * 60
-        )
-
-        let cardioDay = WorkoutTemplate(
-            name: "Cardio Day",
-            workoutType: .cardio,
-            exercises: [
-                // Choose one cardio option per session
-                WorkoutExercise(lift: run, order: 1, priority: .core, targetSets: 1, restTime: 0)
-                // Alternative: WorkoutExercise(lift: row, order: 1, priority: .core, targetSets: 1, restTime: 0)
-            ],
-            estimatedDuration: 30 * 60
-        )
-
-        // Create workout cycle
+        // Initialize empty cycle - templates will be generated on-demand
         workoutCycle = WorkoutCycle(
-            templates: [pushDay, pullDay, legDay, cardioDay],
+            templates: [],  // Empty - we'll generate dynamically
             lastCompletedType: nil
         )
 
-        print("📋 Loaded workout cycle with \(workoutCycle?.templates.count ?? 0) templates")
+        print("📋 Workout cycle initialized - templates will be generated dynamically")
     }
 
     // MARK: - Live Activity Helpers
