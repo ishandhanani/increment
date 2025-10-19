@@ -82,6 +82,25 @@ public class SessionManager {
 
         print("🔄 resumeSession() proceeding with resume")
 
+        // IMPORTANT: Restore workout data from session-scoped storage
+        if let sessionPlan = session.workoutPlan,
+           let sessionProfiles = session.exerciseProfilesForSession {
+            print("🔄 Restoring workout data from session storage")
+            workoutPlans = [sessionPlan]
+            exerciseProfiles = sessionProfiles
+            print("🔄 Restored \(sessionProfiles.count) exercise profiles and workout plan")
+        } else if let template = currentWorkoutTemplate {
+            // Fallback: regenerate from template if session data is missing
+            print("🔄 Session data missing, regenerating from template: \(template.name)")
+            let (plan, profiles) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
+            workoutPlans = [plan]
+            exerciseProfiles = profiles
+            print("🔄 Generated \(profiles.count) exercise profiles and workout plan")
+        } else {
+            print("🔄 ERROR: No workout data available for resume")
+            return
+        }
+
         // Restore exercise index
         if let exerciseIndex = session.currentExerciseIndex {
             currentExerciseIndex = exerciseIndex
@@ -264,41 +283,41 @@ public class SessionManager {
 
     // MARK: - Session Control
 
-    public func startSession(workoutPlanId: UUID) {
-        print("🎯 startSession() called with planId: \(workoutPlanId.uuidString)")
-        print("🎯 workoutPlans.count: \(workoutPlans.count)")
-        print("🎯 Looking for plan with id: \(workoutPlanId.uuidString)")
-        guard let plan = workoutPlans.first(where: { $0.id == workoutPlanId }) else {
-            print("🎯 ERROR: Could not find plan with id: \(workoutPlanId.uuidString)")
-            print("🎯 Available plans: \(workoutPlans.map { $0.id.uuidString })")
-            return
-        }
-        print("🎯 Found plan: \(plan.name)")
+    public func startSession() {
+        print("🎯 startSession() called - using new template system")
 
-        currentSession = Session(workoutPlanId: plan.id)
+        // Reset session state
         currentExerciseIndex = 0
         currentSetIndex = 0
         isFirstExercise = true
 
-        // Persist workout plans and exercise profiles so they're available after app restart
-        PersistenceManager.shared.saveWorkoutPlans(workoutPlans)
-        PersistenceManager.shared.saveExerciseProfiles(exerciseProfiles)
+        // Get next workout from cycle
+        guard let nextWorkout = workoutCycle?.nextWorkout() else {
+            print("🎯 ERROR: No workout cycle available!")
+            return
+        }
+
+        print("🎯 Next workout: \(nextWorkout.name)")
+        currentWorkoutTemplate = nextWorkout
+
+        // Create a temporary session (will be properly initialized after template conversion)
+        currentSession = Session(workoutPlanId: nextWorkout.id)
 
         // Show pre-workout feeling screen
         sessionState = .preWorkout
     }
 
+    // DEPRECATED: Old method for backward compatibility
+    public func startSession(workoutPlanId: UUID) {
+        print("🎯 DEPRECATED: startSession(workoutPlanId:) called")
+        startSession()
+    }
+
     public func logPreWorkoutFeeling(_ feeling: PreWorkoutFeeling) {
         currentSession?.preWorkoutFeeling = feeling
-
-        // Determine next workout from cycle
-        if let nextWorkout = workoutCycle?.nextWorkout() {
-            currentWorkoutTemplate = nextWorkout
-        }
-
         persistSession()
 
-        // Go to workout overview instead of directly to stretching
+        // Go to workout overview (template already set in startSession)
         sessionState = .workoutOverview
     }
 
@@ -307,30 +326,22 @@ public class SessionManager {
     public func startWorkoutFromTemplate() {
         guard let template = currentWorkoutTemplate else { return }
 
-        // Convert template to old format (WorkoutPlan + ExerciseProfiles)
+        // Convert template to WorkoutPlan + ExerciseProfiles ONCE for this session
         let (plan, profiles) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
 
-        // Merge profiles into existing dictionary
-        for (id, profile) in profiles {
-            exerciseProfiles[id] = profile
-        }
+        // Store in SESSION-SCOPED storage (not global dictionaries)
+        currentSession?.workoutPlan = plan
+        currentSession?.exerciseProfilesForSession = profiles
 
-        // Replace or add the workout plan
-        if let existingIndex = workoutPlans.firstIndex(where: { $0.id == plan.id }) {
-            workoutPlans[existingIndex] = plan
-        } else {
-            workoutPlans.append(plan)
-        }
+        // Also populate the working dictionaries for this session
+        exerciseProfiles = profiles
+        workoutPlans = [plan]
 
-        // Update current session to use this plan
-        currentSession = Session(workoutPlanId: plan.id)
-
-        // Persist updated data
-        PersistenceManager.shared.saveWorkoutPlans(workoutPlans)
-        PersistenceManager.shared.saveExerciseProfiles(exerciseProfiles)
+        print("✅ Generated workout plan with \(profiles.count) exercises for session")
 
         // Start stretching phase
         startStretchingPhase()
+        persistSession()
     }
 
     // MARK: - Stretching Phase
@@ -746,28 +757,13 @@ public class SessionManager {
 
     private func loadPersistedState() {
         print("💾 loadPersistedState() called")
-        // Load exercise states
+
+        // Load exercise states (always needed for progression tracking)
         exerciseStates = PersistenceManager.shared.loadExerciseStates()
 
-        // Load profiles (or use defaults if none exist)
-        let savedProfiles = PersistenceManager.shared.loadExerciseProfiles()
-        print("💾 Loaded \(savedProfiles.count) saved profiles from persistence")
-        print("💾 Current exerciseProfiles count before merge: \(exerciseProfiles.count)")
-        if !savedProfiles.isEmpty {
-            exerciseProfiles = savedProfiles
-            print("💾 Replaced exerciseProfiles with saved profiles")
-        }
-        print("💾 Final exerciseProfiles count: \(exerciseProfiles.count)")
-
-        // Load workout plans
-        let savedPlans = PersistenceManager.shared.loadWorkoutPlans()
-        print("💾 Loaded \(savedPlans.count) saved plans from persistence")
-        print("💾 workoutPlans.count before merge: \(workoutPlans.count)")
-        if !savedPlans.isEmpty {
-            workoutPlans = savedPlans
-            print("💾 Replaced workoutPlans with saved plans")
-        }
-        print("💾 Final workoutPlans.count: \(workoutPlans.count)")
+        // IMPORTANT: Skip loading old workout plans and profiles
+        // We're now using the template system exclusively
+        print("💾 Skipping old workout plans and profiles - using template system")
 
         // Load current session if exists
         if let savedSession = PersistenceManager.shared.loadCurrentSession() {
@@ -778,6 +774,12 @@ public class SessionManager {
             } else {
                 // Keep session for potential resume
                 currentSession = savedSession
+
+                // Try to restore the workout template from the session's workoutPlanId
+                if let template = workoutCycle?.templates.first(where: { $0.id == savedSession.workoutPlanId }) {
+                    currentWorkoutTemplate = template
+                    print("💾 Restored workout template: \(template.name)")
+                }
             }
         }
     }

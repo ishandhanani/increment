@@ -217,6 +217,10 @@ public struct Session: Codable, Identifiable, Sendable {
     public var stats: SessionStats
     public var synced: Bool
 
+    // Session-scoped workout data (generated from template once per session)
+    public var workoutPlan: WorkoutPlan?  // The generated plan for this session
+    public var exerciseProfilesForSession: [UUID: ExerciseProfile]?  // Exercise profiles for this session
+
     // Resume state fields
     public var isActive: Bool
     public var currentExerciseIndex: Int?
@@ -233,6 +237,8 @@ public struct Session: Codable, Identifiable, Sendable {
         exerciseLogs: [ExerciseSessionLog] = [],
         stats: SessionStats = SessionStats(totalVolume: 0),
         synced: Bool = false,
+        workoutPlan: WorkoutPlan? = nil,
+        exerciseProfilesForSession: [UUID: ExerciseProfile]? = nil,
         isActive: Bool = true,
         currentExerciseIndex: Int? = nil,
         currentSetIndex: Int? = nil,
@@ -247,6 +253,8 @@ public struct Session: Codable, Identifiable, Sendable {
         self.exerciseLogs = exerciseLogs
         self.stats = stats
         self.synced = synced
+        self.workoutPlan = workoutPlan
+        self.exerciseProfilesForSession = exerciseProfilesForSession
         self.isActive = isActive
         self.currentExerciseIndex = currentExerciseIndex
         self.currentSetIndex = currentSetIndex
