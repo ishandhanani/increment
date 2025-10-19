@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Exercise Header
 
 struct ExerciseHeader: View {
-    let exerciseName: String
+    let exerciseId: String
     let setInfo: String
     let goal: String
     let weight: Double
@@ -12,7 +12,7 @@ struct ExerciseHeader: View {
     var body: some View {
         HStack(alignment: .top) {
             // Left: Exercise name
-            Text(exerciseName)
+            Text(exerciseId)
                 .font(.system(.title3, design: .monospaced))
                 .fontWeight(.bold)
                 .frame(maxWidth: .infinity, alignment: .leading)

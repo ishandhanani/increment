@@ -11,7 +11,7 @@ struct WarmupView: View {
         VStack(spacing: 0) {
             // Header
             if let exerciseLog = sessionManager.currentExerciseLog,
-               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseName] {
+               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId] {
                 ExerciseHeader(
                     exerciseName: profile.name,
                     setInfo: "Warmup",

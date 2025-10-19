@@ -48,7 +48,7 @@ struct WorkoutTemplateConverter {
     }
 
     /// Converts a WorkoutTemplate to dictionary of ExerciseProfiles
-    /// Returns: [String: ExerciseProfile] keyed by exercise name
+    /// Returns: [String: ExerciseProfile] keyed by exercise ID
     static func toExerciseProfiles(from template: WorkoutTemplate) -> [String: ExerciseProfile] {
         var profiles: [String: ExerciseProfile] = [:]
 
@@ -59,7 +59,7 @@ struct WorkoutTemplateConverter {
                 sets: workoutExercise.targetSets,
                 restSec: Int(workoutExercise.restTime)
             )
-            profiles[profile.name] = profile
+            profiles[workoutExercise.lift.id] = profile  // Key by lift.id instead of profile.name
         }
 
         return profiles

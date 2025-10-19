@@ -128,7 +128,7 @@ public struct ExerciseProfile: Codable, Identifiable, Sendable {
 // MARK: - ExerciseState
 
 public struct ExerciseState: Codable, Sendable {
-    public let exerciseName: String
+    public let exerciseId: String  // Snake_case exercise ID (e.g., "barbell_bench_press")
     public var lastStartLoad: Double
     public var lastDecision: SessionDecision?
     public var lastUpdatedAt: Date
@@ -171,7 +171,7 @@ public struct SetLog: Codable, Identifiable, Sendable {
 
 public struct ExerciseSessionLog: Codable, Identifiable, Sendable {
     public let id: UUID
-    public let exerciseName: String
+    public let exerciseId: String  // Snake_case exercise ID (e.g., "cable_fly")
     public let startWeight: Double
     public var setLogs: [SetLog]
     public var sessionDecision: SessionDecision?
@@ -179,14 +179,14 @@ public struct ExerciseSessionLog: Codable, Identifiable, Sendable {
 
     public init(
         id: UUID = UUID(),
-        exerciseName: String,
+        exerciseId: String,
         startWeight: Double,
         setLogs: [SetLog] = [],
         sessionDecision: SessionDecision? = nil,
         nextStartWeight: Double? = nil
     ) {
         self.id = id
-        self.exerciseName = exerciseName
+        self.exerciseId = exerciseId
         self.startWeight = startWeight
         self.setLogs = setLogs
         self.sessionDecision = sessionDecision
@@ -297,9 +297,10 @@ public struct SteelConfig: Codable, Sendable {
     }
 }
 
-/// A lift/exercise definition (no UUID - identified by name)
+/// A lift/exercise definition (identified by snake_case id)
 public struct Lift: Codable, Hashable, Sendable {
-    public let name: String              // e.g., "Bench Press", "Squat"
+    public let id: String                // Snake_case identifier: "barbell_bench_press"
+    public let name: String              // Display name: "Barbell Bench Press"
     public let category: LiftCategory
     public let equipment: Equipment
     public let muscleGroups: [MuscleGroup]
@@ -312,6 +313,7 @@ public struct Lift: Codable, Hashable, Sendable {
     public let videoURL: URL?
 
     public init(
+        id: String,
         name: String,
         category: LiftCategory,
         equipment: Equipment,
@@ -320,6 +322,7 @@ public struct Lift: Codable, Hashable, Sendable {
         instructions: String? = nil,
         videoURL: URL? = nil
     ) {
+        self.id = id
         self.name = name
         self.category = category
         self.equipment = equipment
@@ -329,13 +332,13 @@ public struct Lift: Codable, Hashable, Sendable {
         self.videoURL = videoURL
     }
 
-    // Hashable conformance based on name (unique identifier)
+    // Hashable conformance based on id (unique identifier)
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(name)
+        hasher.combine(id)
     }
 
     public static func == (lhs: Lift, rhs: Lift) -> Bool {
-        lhs.name == rhs.name
+        lhs.id == rhs.id
     }
 }
 

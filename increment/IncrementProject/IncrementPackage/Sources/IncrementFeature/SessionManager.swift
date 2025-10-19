@@ -132,13 +132,13 @@ public class SessionManager {
             // Exercise was started but not logged yet - create a new log
             let exercises = template.exercises.sorted(by: { $0.order < $1.order })
             let exercise = exercises[currentExerciseIndex]
-            let exerciseName = exercise.lift.name
-            let startWeight = exerciseStates[exerciseName]?.lastStartLoad ?? 45.0
+            let exerciseId = exercise.lift.id
+            let startWeight = exerciseStates[exerciseId]?.lastStartLoad ?? 45.0
             currentExerciseLog = ExerciseSessionLog(
-                exerciseName: exerciseName,
+                exerciseId: exerciseId,
                 startWeight: startWeight
             )
-            AppLogger.session.debug("Created new exercise log for resumed session: \(exerciseName, privacy: .public)")
+            AppLogger.session.debug("Created new exercise log for resumed session: \(exerciseId, privacy: .public)")
         } else {
             AppLogger.session.error("Could not restore exercise log - no valid source")
         }
@@ -165,8 +165,8 @@ public class SessionManager {
             startStretchingTimer(duration: duration)
         case .rest:
             // Restart rest timer with default duration (can't reliably restore exact time)
-            if let exerciseName = currentExerciseLog?.exerciseName,
-               let profile = exerciseProfiles[exerciseName] {
+            if let exerciseId = currentExerciseLog?.exerciseId,
+               let profile = exerciseProfiles[exerciseId] {
                 startRestTimer(duration: profile.defaultRestSec)
             }
         default:
@@ -351,7 +351,7 @@ public class SessionManager {
         guard let template = currentSession?.workoutTemplate,
               let firstExercise = template.exercises.sorted(by: { $0.order < $1.order }).first else { return }
 
-        startExercise(exerciseName: firstExercise.lift.name)
+        startExercise(exerciseId: firstExercise.lift.id)
     }
 
     public func finishStretching() {
@@ -370,17 +370,17 @@ public class SessionManager {
         }
 
         AppLogger.session.notice("Starting first exercise: \(firstExercise.lift.name, privacy: .public)")
-        startExercise(exerciseName: firstExercise.lift.name)
+        startExercise(exerciseId: firstExercise.lift.id)
     }
 
-    public func startExercise(exerciseName: String) {
-        guard let profile = exerciseProfiles[exerciseName] else { return }
+    public func startExercise(exerciseId: String) {
+        guard let profile = exerciseProfiles[exerciseId] else { return }
 
         // Get starting weight from state or use default
-        let startWeight = exerciseStates[exerciseName]?.lastStartLoad ?? 45.0  // Default bar weight
+        let startWeight = exerciseStates[exerciseId]?.lastStartLoad ?? 45.0  // Default bar weight
 
         currentExerciseLog = ExerciseSessionLog(
-            exerciseName: exerciseName,
+            exerciseId: exerciseId,
             startWeight: startWeight
         )
 
@@ -401,7 +401,7 @@ public class SessionManager {
         // Update Live Activity
         Task {
             await updateLiveActivity(
-                exerciseName: profile.name,
+                exerciseId: profile.name,
                 currentSet: 1,
                 totalSets: profile.sets,
                 restTimeRemaining: nil,
@@ -415,7 +415,7 @@ public class SessionManager {
     public func advanceWarmup() {
         guard case .warmup(let step) = sessionState else { return }
         guard let exerciseLog = currentExerciseLog,
-              exerciseProfiles[exerciseLog.exerciseName] != nil else { return }
+              exerciseProfiles[exerciseLog.exerciseId] != nil else { return }
 
         if step == 0 {
             // Move to 70%×3
@@ -453,7 +453,7 @@ public class SessionManager {
 
     public func logSet(reps: Int, rating: Rating) {
         guard let exerciseLog = currentExerciseLog,
-              let profile = exerciseProfiles[exerciseLog.exerciseName] else { return }
+              let profile = exerciseProfiles[exerciseLog.exerciseId] else { return }
 
         let currentWeight = nextPrescription?.weight ?? exerciseLog.startWeight
         let targetReps = nextPrescription?.reps ?? profile.repRange.lowerBound
@@ -499,8 +499,8 @@ public class SessionManager {
         restTimer?.stop()
         restTimer = nil
 
-        guard let exerciseName = currentExerciseLog?.exerciseName,
-              let profile = exerciseProfiles[exerciseName] else { return }
+        guard let exerciseId = currentExerciseLog?.exerciseId,
+              let profile = exerciseProfiles[exerciseId] else { return }
 
         if currentSetIndex < profile.sets {
             sessionState = .workingSet
@@ -531,13 +531,13 @@ public class SessionManager {
 
                 // Update Live Activity with rest timer
                 guard let exerciseLog = self.currentExerciseLog,
-                      let profile = self.exerciseProfiles[exerciseLog.exerciseName] else {
+                      let profile = self.exerciseProfiles[exerciseLog.exerciseId] else {
                     return
                 }
 
                 Task { @MainActor in
                     await self.updateLiveActivity(
-                        exerciseName: profile.name,
+                        exerciseId: profile.name,
                         currentSet: self.currentSetIndex + 1,
                         totalSets: profile.sets,
                         restTimeRemaining: remaining,
@@ -556,7 +556,7 @@ public class SessionManager {
 
     public func finishExercise() {
         guard var exerciseLog = currentExerciseLog,
-              let profile = exerciseProfiles[exerciseLog.exerciseName] else { return }
+              let profile = exerciseProfiles[exerciseLog.exerciseId] else { return }
 
         // Compute decision
         let decision = SteelProgressionEngine.computeDecision(
@@ -568,7 +568,7 @@ public class SessionManager {
         exerciseLog.sessionDecision = decision
 
         // Compute next session start weight
-        let recentLoads = getRecentLoads(exerciseName: exerciseLog.exerciseName)
+        let recentLoads = getRecentLoads(exerciseId: exerciseLog.exerciseId)
 
         // Package profile config as SteelConfig
         let steelConfig = SteelConfig(
@@ -592,7 +592,7 @@ public class SessionManager {
 
         // Update state
         updateExerciseState(
-            exerciseName: exerciseLog.exerciseName,
+            exerciseId: exerciseLog.exerciseId,
             startLoad: result.startWeight,
             decision: decision
         )
@@ -613,7 +613,7 @@ public class SessionManager {
         let exercises = template.exercises.sorted(by: { $0.order < $1.order })
         if currentExerciseIndex < exercises.count {
             let nextExercise = exercises[currentExerciseIndex]
-            startExercise(exerciseName: nextExercise.lift.name)
+            startExercise(exerciseId: nextExercise.lift.id)
         } else {
             finishSession()
         }
@@ -655,7 +655,7 @@ public class SessionManager {
 
     private func computeInitialPrescription() {
         guard let exerciseLog = currentExerciseLog,
-              let profile = exerciseProfiles[exerciseLog.exerciseName] else { return }
+              let profile = exerciseProfiles[exerciseLog.exerciseId] else { return }
 
         nextPrescription = (
             reps: profile.repRange.lowerBound,
@@ -665,7 +665,7 @@ public class SessionManager {
 
     private func applyBadDaySwitch() {
         guard let exerciseLog = currentExerciseLog,
-              let profile = exerciseProfiles[exerciseLog.exerciseName],
+              let profile = exerciseProfiles[exerciseLog.exerciseId],
               let currentWeight = nextPrescription?.weight else { return }
 
         let result = SteelProgressionEngine.applyBadDayAdjustment(
@@ -678,7 +678,7 @@ public class SessionManager {
         nextPrescription = (reps: result.nextReps, weight: result.nextWeight)
     }
 
-    private func getRecentLoads(exerciseName: String) -> [Double] {
+    private func getRecentLoads(exerciseId: String) -> [Double] {
         // Get all sessions from persistence
         let allSessions = PersistenceManager.shared.loadSessions()
 
@@ -696,7 +696,7 @@ public class SessionManager {
         // Extract start weights for the specific exercise
         let startWeights = recentSessions.compactMap { session -> Double? in
             // Find exercise log for this exercise in the session
-            guard let exerciseLog = session.exerciseLogs.first(where: { $0.exerciseName == exerciseName }) else {
+            guard let exerciseLog = session.exerciseLogs.first(where: { $0.exerciseId == exerciseId }) else {
                 return nil
             }
             return exerciseLog.startWeight
@@ -705,9 +705,9 @@ public class SessionManager {
         return startWeights
     }
 
-    private func updateExerciseState(exerciseName: String, startLoad: Double, decision: SessionDecision) {
-        exerciseStates[exerciseName] = ExerciseState(
-            exerciseName: exerciseName,
+    private func updateExerciseState(exerciseId: String, startLoad: Double, decision: SessionDecision) {
+        exerciseStates[exerciseId] = ExerciseState(
+            exerciseId: exerciseId,
             lastStartLoad: startLoad,
             lastDecision: decision,
             lastUpdatedAt: Date()
@@ -798,7 +798,7 @@ public class SessionManager {
     // MARK: - Live Activity Helpers
 
     private func updateLiveActivity(
-        exerciseName: String,
+        exerciseId: String,
         currentSet: Int,
         totalSets: Int,
         restTimeRemaining: Int?,
@@ -817,7 +817,7 @@ public class SessionManager {
         // Start or update activity
         if liveActivityManager.hasActiveActivity {
             await liveActivityManager.updateActivity(
-                exerciseName: exerciseName,
+                exerciseId: exerciseId,
                 currentSet: currentSet,
                 totalSets: totalSets,
                 restTimeRemaining: restTimeRemaining,
@@ -830,7 +830,7 @@ public class SessionManager {
         } else {
             await liveActivityManager.startActivity(
                 workoutName: template.name,
-                exerciseName: exerciseName,
+                exerciseId: exerciseId,
                 currentSet: currentSet,
                 totalSets: totalSets,
                 nextWeight: nextWeight,
@@ -850,7 +850,7 @@ public class SessionManager {
 
         let exercisesCompleted = session.exerciseLogs.count
         let totalExercises = template.exercises.count
-        let finalExercise = exercisesCompleted > 0 ? session.exerciseLogs.last?.exerciseName : nil
+        let finalExercise = exercisesCompleted > 0 ? session.exerciseLogs.last?.exerciseId : nil
 
         await liveActivityManager.endActivity(
             finalExercise: finalExercise,

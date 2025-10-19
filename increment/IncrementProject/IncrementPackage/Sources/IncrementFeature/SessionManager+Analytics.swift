@@ -66,30 +66,30 @@ extension SessionManager {
     // MARK: - Exercise Progression
 
     /// Get progression data for a specific exercise
-    /// - Parameter exerciseName: Name of the exercise to track
+    /// - Parameter exerciseId: Name of the exercise to track
     /// - Returns: Array of progression data points
-    public func progressionData(for exerciseName: String) -> [ExerciseProgress] {
+    public func progressionData(for exerciseId: String) -> [ExerciseProgress] {
         return AnalyticsEngine.generateExerciseProgression(
-            exerciseName: exerciseName,
+            exerciseId: exerciseId,
             sessions: allSessions
         )
     }
 
     /// Get summary statistics for a specific exercise
-    /// - Parameter exerciseName: Name of the exercise
+    /// - Parameter exerciseId: Name of the exercise
     /// - Returns: Exercise summary with stats
-    public func exerciseSummary(for exerciseName: String) -> ExerciseSummary? {
-        guard let profile = exerciseProfiles[exerciseName] else { return nil }
+    public func exerciseSummary(for exerciseId: String) -> ExerciseSummary? {
+        guard let profile = exerciseProfiles[exerciseId] else { return nil }
 
         let exerciseSessions = allSessions.filter { session in
-            session.exerciseLogs.contains { $0.exerciseName == exerciseName }
+            session.exerciseLogs.contains { $0.exerciseId == exerciseId }
         }
 
         guard !exerciseSessions.isEmpty else { return nil }
 
         // Calculate stats
         let totalVolume = exerciseSessions.reduce(0.0) { total, session in
-            guard let log = session.exerciseLogs.first(where: { $0.exerciseName == exerciseName }) else {
+            guard let log = session.exerciseLogs.first(where: { $0.exerciseId == exerciseId }) else {
                 return total
             }
             let logVolume = log.setLogs.reduce(0.0) { $0 + (Double($1.achievedReps) * $1.actualWeight) }
@@ -97,7 +97,7 @@ extension SessionManager {
         }
 
         // Get current and starting weights
-        let progression = progressionData(for: exerciseName)
+        let progression = progressionData(for: exerciseId)
         let currentWeight = progression.last?.weight ?? 0.0
         let startingWeight = progression.first?.weight ?? 0.0
 
@@ -106,7 +106,7 @@ extension SessionManager {
         var ratingCount = 0
 
         for session in exerciseSessions {
-            guard let log = session.exerciseLogs.first(where: { $0.exerciseName == exerciseName }) else {
+            guard let log = session.exerciseLogs.first(where: { $0.exerciseId == exerciseId }) else {
                 continue
             }
             for setLog in log.setLogs {
@@ -134,7 +134,7 @@ extension SessionManager {
     /// List of all exercises that have been performed
     public var exercisesPerformed: [ExerciseProfile] {
         let performedNames = Set(allSessions.flatMap { session in
-            session.exerciseLogs.map { $0.exerciseName }
+            session.exerciseLogs.map { $0.exerciseId }
         })
 
         return performedNames.compactMap { exerciseProfiles[$0] }

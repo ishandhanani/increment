@@ -7,6 +7,7 @@ struct LiftLibrary {
     // MARK: - Push Lifts
 
     static let benchPress = Lift(
+        id: "barbell_bench_press",
         name: "Barbell Bench Press",
         category: .push,
         equipment: .barbell,
@@ -22,6 +23,7 @@ struct LiftLibrary {
     )
 
     static let inclineDumbbellBench = Lift(
+        id: "incline_dumbbell_bench",
         name: "Incline Dumbbell Bench",
         category: .push,
         equipment: .dumbbell,
@@ -36,6 +38,7 @@ struct LiftLibrary {
     )
 
     static let cableFly = Lift(
+        id: "cable_fly",
         name: "Cable Fly",
         category: .push,
         equipment: .cable,
@@ -50,6 +53,7 @@ struct LiftLibrary {
     )
 
     static let tricepPushdown = Lift(
+        id: "tricep_pushdown",
         name: "Tricep Pushdown",
         category: .push,
         equipment: .cable,
@@ -64,6 +68,7 @@ struct LiftLibrary {
     )
 
     static let skullcrushers = Lift(
+        id: "skullcrushers",
         name: "Skullcrushers",
         category: .push,
         equipment: .barbell,
@@ -80,6 +85,7 @@ struct LiftLibrary {
     // MARK: - Pull Lifts
 
     static let pullups = Lift(
+        id: "weighted_pullups",
         name: "Weighted Pull-ups",
         category: .pull,
         equipment: .bodyweight,
@@ -94,6 +100,7 @@ struct LiftLibrary {
     )
 
     static let latPulldown = Lift(
+        id: "lat_pulldown",
         name: "Lat Pulldown",
         category: .pull,
         equipment: .machine,
@@ -108,6 +115,7 @@ struct LiftLibrary {
     )
 
     static let barbellRow = Lift(
+        id: "barbell_row",
         name: "Barbell Row",
         category: .pull,
         equipment: .barbell,
@@ -123,6 +131,7 @@ struct LiftLibrary {
     )
 
     static let dumbbellCurl = Lift(
+        id: "dumbbell_curl",
         name: "Dumbbell Curl",
         category: .pull,
         equipment: .dumbbell,
@@ -137,6 +146,7 @@ struct LiftLibrary {
     )
 
     static let hammerCurl = Lift(
+        id: "hammer_curl",
         name: "Hammer Curl",
         category: .pull,
         equipment: .dumbbell,
@@ -153,6 +163,7 @@ struct LiftLibrary {
     // MARK: - Leg Lifts
 
     static let squat = Lift(
+        id: "barbell_squat",
         name: "Barbell Squat",
         category: .legs,
         equipment: .barbell,
@@ -168,6 +179,7 @@ struct LiftLibrary {
     )
 
     static let weightedLunges = Lift(
+        id: "weighted_lunges",
         name: "Weighted Lunges",
         category: .legs,
         equipment: .dumbbell,
@@ -182,6 +194,7 @@ struct LiftLibrary {
     )
 
     static let legPress = Lift(
+        id: "leg_press",
         name: "Leg Press",
         category: .legs,
         equipment: .machine,
@@ -196,6 +209,7 @@ struct LiftLibrary {
     )
 
     static let calfRaises = Lift(
+        id: "calf_raises",
         name: "Calf Raises",
         category: .legs,
         equipment: .machine,
@@ -212,6 +226,7 @@ struct LiftLibrary {
     // MARK: - Cardio Lifts
 
     static let run = Lift(
+        id: "two_mile_run",
         name: "2 Mile Run",
         category: .cardio,
         equipment: .cardioMachine,
@@ -225,6 +240,7 @@ struct LiftLibrary {
     )
 
     static let row = Lift(
+        id: "twenty_min_row",
         name: "20 Min Row",
         category: .cardio,
         equipment: .cardioMachine,

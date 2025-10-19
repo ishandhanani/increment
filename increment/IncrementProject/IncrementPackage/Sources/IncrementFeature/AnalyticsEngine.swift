@@ -101,7 +101,7 @@ public struct AnalyticsEngine {
         // Sum volume by category
         for session in sessions {
             for exerciseLog in session.exerciseLogs {
-                guard let profile = profiles[exerciseLog.exerciseName] else { continue }
+                guard let profile = profiles[exerciseLog.exerciseId] else { continue }
 
                 let exerciseVolume = exerciseLog.setLogs.reduce(0.0) { total, setLog in
                     total + (Double(setLog.achievedReps) * setLog.actualWeight)
@@ -128,11 +128,11 @@ public struct AnalyticsEngine {
 
     /// Generates progression data for a specific exercise
     /// - Parameters:
-    ///   - exerciseName: Name of the exercise to track
+    ///   - exerciseId: Name of the exercise to track
     ///   - sessions: All workout sessions
     /// - Returns: Array of progression data points
     public static func generateExerciseProgression(
-        exerciseName: String,
+        exerciseId: String,
         sessions: [Session]
     ) -> [ExerciseProgress] {
         let sortedSessions = sessions.sorted { $0.date < $1.date }
@@ -140,7 +140,7 @@ public struct AnalyticsEngine {
         var progressData: [ExerciseProgress] = []
 
         for session in sortedSessions {
-            guard let exerciseLog = session.exerciseLogs.first(where: { $0.exerciseName == exerciseName }) else {
+            guard let exerciseLog = session.exerciseLogs.first(where: { $0.exerciseId == exerciseId }) else {
                 continue
             }
 
@@ -264,26 +264,26 @@ public struct AnalyticsEngine {
 
         for session in sessions {
             for exerciseLog in session.exerciseLogs {
-                exerciseTotalSessions[exerciseLog.exerciseName, default: 0] += 1
+                exerciseTotalSessions[exerciseLog.exerciseId, default: 0] += 1
 
                 if case .up_1 = exerciseLog.sessionDecision {
-                    exerciseUpDecisions[exerciseLog.exerciseName, default: 0] += 1
+                    exerciseUpDecisions[exerciseLog.exerciseId, default: 0] += 1
                 } else if case .up_2 = exerciseLog.sessionDecision {
-                    exerciseUpDecisions[exerciseLog.exerciseName, default: 0] += 1
+                    exerciseUpDecisions[exerciseLog.exerciseId, default: 0] += 1
                 }
             }
         }
 
         // Calculate consistency percentage
-        var consistencyScores: [(exerciseName: String, score: Double)] = []
-        for (exerciseName, upCount) in exerciseUpDecisions {
-            let totalSessions = exerciseTotalSessions[exerciseName] ?? 1
+        var consistencyScores: [(exerciseId: String, score: Double)] = []
+        for (exerciseId, upCount) in exerciseUpDecisions {
+            let totalSessions = exerciseTotalSessions[exerciseId] ?? 1
             let score = Double(upCount) / Double(totalSessions)
-            consistencyScores.append((exerciseName, score))
+            consistencyScores.append((exerciseId, score))
         }
 
         guard let best = consistencyScores.max(by: { $0.score < $1.score }),
-              let profile = profiles[best.exerciseName],
+              let profile = profiles[best.exerciseId],
               best.score > 0.5 else {
             return nil
         }

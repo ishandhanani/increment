@@ -6,7 +6,7 @@ import Charts
 @MainActor
 struct ExerciseProgressView: View {
     @Environment(SessionManager.self) private var sessionManager
-    @State private var selectedExerciseName: String?
+    @State private var selectedExerciseId: String?
 
     var body: some View {
         ScrollView {
@@ -15,17 +15,17 @@ struct ExerciseProgressView: View {
                 if !sessionManager.exercisesPerformed.isEmpty {
                     ExerciseSelector(
                         exercises: sessionManager.exercisesPerformed,
-                        selectedName: $selectedExerciseName
+                        selectedName: $selectedExerciseId
                     )
 
                     // Progression Chart
-                    if let exerciseName = selectedExerciseName {
+                    if let exerciseId = selectedExerciseId {
                         ProgressionChart(
-                            progression: sessionManager.progressionData(for: exerciseName)
+                            progression: sessionManager.progressionData(for: exerciseId)
                         )
 
                         // Exercise Summary
-                        if let summary = sessionManager.exerciseSummary(for: exerciseName) {
+                        if let summary = sessionManager.exerciseSummary(for: exerciseId) {
                             ExerciseSummaryCard(summary: summary)
                         }
                     } else {
@@ -40,9 +40,9 @@ struct ExerciseProgressView: View {
         }
         .onAppear {
             // Select first exercise by default
-            if selectedExerciseName == nil,
+            if selectedExerciseId == nil,
                let firstExercise = sessionManager.exercisesPerformed.first {
-                selectedExerciseName = firstExercise.name
+                selectedExerciseId = firstExercise.name
             }
         }
     }
