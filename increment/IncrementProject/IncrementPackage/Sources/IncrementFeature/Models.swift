@@ -79,9 +79,11 @@ public enum SessionDecision: String, Codable, Sendable {
 
 // MARK: - ExerciseProfile
 
-public struct ExerciseProfile: Codable, Identifiable, Sendable {
-    public let id: UUID
-    public let name: String
+/// Runtime configuration for STEEL progression engine
+/// Note: Keyed by exercise ID (from Lift.id) in dictionaries, not by this struct's properties
+public struct ExerciseProfile: Codable, Sendable, Identifiable {
+    public var id: String { name }  // Identifiable conformance using name
+    public let name: String  // Display name (e.g., "Barbell Bench Press")
     public let category: ExerciseCategory
     public let priority: ExercisePriority
     public let repRange: ClosedRange<Int>
@@ -95,7 +97,6 @@ public struct ExerciseProfile: Codable, Identifiable, Sendable {
     public let defaultRestSec: Int
 
     public init(
-        id: UUID = UUID(),
         name: String,
         category: ExerciseCategory,
         priority: ExercisePriority,
@@ -109,7 +110,6 @@ public struct ExerciseProfile: Codable, Identifiable, Sendable {
         warmupRule: String = "ramped_2",
         defaultRestSec: Int
     ) {
-        self.id = id
         self.name = name
         self.category = category
         self.priority = priority
@@ -128,7 +128,7 @@ public struct ExerciseProfile: Codable, Identifiable, Sendable {
 // MARK: - ExerciseState
 
 public struct ExerciseState: Codable, Sendable {
-    public let exerciseId: UUID
+    public let exerciseId: String  // Snake_case exercise ID (e.g., "barbell_bench_press")
     public var lastStartLoad: Double
     public var lastDecision: SessionDecision?
     public var lastUpdatedAt: Date
@@ -171,7 +171,7 @@ public struct SetLog: Codable, Identifiable, Sendable {
 
 public struct ExerciseSessionLog: Codable, Identifiable, Sendable {
     public let id: UUID
-    public let exerciseId: UUID
+    public let exerciseId: String  // Snake_case exercise ID (e.g., "cable_fly")
     public let startWeight: Double
     public var setLogs: [SetLog]
     public var sessionDecision: SessionDecision?
@@ -179,7 +179,7 @@ public struct ExerciseSessionLog: Codable, Identifiable, Sendable {
 
     public init(
         id: UUID = UUID(),
-        exerciseId: UUID,
+        exerciseId: String,
         startWeight: Double,
         setLogs: [SetLog] = [],
         sessionDecision: SessionDecision? = nil,
@@ -218,7 +218,6 @@ public struct Session: Codable, Identifiable, Sendable {
 
     // Session-scoped workout data (stored template for this session)
     public var workoutTemplate: WorkoutTemplate?
-    public var exerciseProfilesForSession: [UUID: ExerciseProfile]?  // Still needed for STEEL lookup
 
     // Resume state fields
     public var isActive: Bool
@@ -236,7 +235,6 @@ public struct Session: Codable, Identifiable, Sendable {
         stats: SessionStats = SessionStats(totalVolume: 0),
         synced: Bool = false,
         workoutTemplate: WorkoutTemplate? = nil,
-        exerciseProfilesForSession: [UUID: ExerciseProfile]? = nil,
         isActive: Bool = true,
         currentExerciseIndex: Int? = nil,
         currentSetIndex: Int? = nil,
@@ -251,7 +249,6 @@ public struct Session: Codable, Identifiable, Sendable {
         self.stats = stats
         self.synced = synced
         self.workoutTemplate = workoutTemplate
-        self.exerciseProfilesForSession = exerciseProfilesForSession
         self.isActive = isActive
         self.currentExerciseIndex = currentExerciseIndex
         self.currentSetIndex = currentSetIndex
@@ -300,9 +297,10 @@ public struct SteelConfig: Codable, Sendable {
     }
 }
 
-/// A lift/exercise definition (no UUID - identified by name)
+/// A lift/exercise definition (identified by snake_case id)
 public struct Lift: Codable, Hashable, Sendable {
-    public let name: String              // e.g., "Bench Press", "Squat"
+    public let id: String                // Snake_case identifier: "barbell_bench_press"
+    public let name: String              // Display name: "Barbell Bench Press"
     public let category: LiftCategory
     public let equipment: Equipment
     public let muscleGroups: [MuscleGroup]
@@ -315,6 +313,7 @@ public struct Lift: Codable, Hashable, Sendable {
     public let videoURL: URL?
 
     public init(
+        id: String,
         name: String,
         category: LiftCategory,
         equipment: Equipment,
@@ -323,6 +322,7 @@ public struct Lift: Codable, Hashable, Sendable {
         instructions: String? = nil,
         videoURL: URL? = nil
     ) {
+        self.id = id
         self.name = name
         self.category = category
         self.equipment = equipment
@@ -332,13 +332,13 @@ public struct Lift: Codable, Hashable, Sendable {
         self.videoURL = videoURL
     }
 
-    // Hashable conformance based on name (unique identifier)
+    // Hashable conformance based on id (unique identifier)
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(name)
+        hasher.combine(id)
     }
 
     public static func == (lhs: Lift, rhs: Lift) -> Bool {
-        lhs.name == rhs.name
+        lhs.id == rhs.id
     }
 }
 
@@ -391,25 +391,12 @@ public struct WorkoutTemplate: Codable, Identifiable, Sendable {
     }
 }
 
-/// Manages the 4-day workout cycle (Push -> Pull -> Legs -> Cardio)
+/// Tracks the workout rotation (Push -> Pull -> Legs -> Cardio)
 public struct WorkoutCycle: Codable, Sendable {
-    public let templates: [WorkoutTemplate]  // [Push, Pull, Legs, Cardio]
     public var lastCompletedType: LiftCategory?
 
-    public init(templates: [WorkoutTemplate], lastCompletedType: LiftCategory? = nil) {
-        self.templates = templates
+    public init(lastCompletedType: LiftCategory? = nil) {
         self.lastCompletedType = lastCompletedType
-    }
-
-    /// Returns the next workout in the cycle
-    public func nextWorkout() -> WorkoutTemplate? {
-        guard let last = lastCompletedType,
-              let nextType = LiftCategory.allCases.first(where: { $0 == last })?.next else {
-            // First workout, start with push
-            return templates.first { $0.workoutType == .push }
-        }
-
-        return templates.first { $0.workoutType == nextType }
     }
 
     /// Updates the cycle after completing a workout

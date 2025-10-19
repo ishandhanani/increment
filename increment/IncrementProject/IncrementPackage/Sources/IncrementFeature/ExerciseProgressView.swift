@@ -6,7 +6,7 @@ import Charts
 @MainActor
 struct ExerciseProgressView: View {
     @Environment(SessionManager.self) private var sessionManager
-    @State private var selectedExerciseId: UUID?
+    @State private var selectedExerciseId: String?
 
     var body: some View {
         ScrollView {
@@ -15,7 +15,7 @@ struct ExerciseProgressView: View {
                 if !sessionManager.exercisesPerformed.isEmpty {
                     ExerciseSelector(
                         exercises: sessionManager.exercisesPerformed,
-                        selectedId: $selectedExerciseId
+                        selectedName: $selectedExerciseId
                     )
 
                     // Progression Chart
@@ -42,7 +42,7 @@ struct ExerciseProgressView: View {
             // Select first exercise by default
             if selectedExerciseId == nil,
                let firstExercise = sessionManager.exercisesPerformed.first {
-                selectedExerciseId = firstExercise.id
+                selectedExerciseId = firstExercise.name
             }
         }
     }
@@ -52,7 +52,7 @@ struct ExerciseProgressView: View {
 
 struct ExerciseSelector: View {
     let exercises: [ExerciseProfile]
-    @Binding var selectedId: UUID?
+    @Binding var selectedName: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -63,12 +63,12 @@ struct ExerciseSelector: View {
             Menu {
                 ForEach(exercises) { exercise in
                     Button(exercise.name) {
-                        selectedId = exercise.id
+                        selectedName = exercise.name
                     }
                 }
             } label: {
                 HStack {
-                    if let selected = exercises.first(where: { $0.id == selectedId }) {
+                    if let selected = exercises.first(where: { $0.name == selectedName }) {
                         Text(selected.name)
                     } else {
                         Text("Select Exercise")

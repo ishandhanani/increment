@@ -151,7 +151,6 @@ public struct OverviewStats: Equatable {
 /// Summary statistics for a specific exercise
 public struct ExerciseSummary: Identifiable, Equatable {
     public let id: UUID
-    public let exerciseId: UUID
     public let name: String
     public let currentWeight: Double
     public let startingWeight: Double
@@ -162,7 +161,6 @@ public struct ExerciseSummary: Identifiable, Equatable {
 
     public init(
         id: UUID = UUID(),
-        exerciseId: UUID,
         name: String,
         currentWeight: Double,
         startingWeight: Double,
@@ -172,7 +170,6 @@ public struct ExerciseSummary: Identifiable, Equatable {
         lastWorkout: Date?
     ) {
         self.id = id
-        self.exerciseId = exerciseId
         self.name = name
         self.currentWeight = currentWeight
         self.startingWeight = startingWeight

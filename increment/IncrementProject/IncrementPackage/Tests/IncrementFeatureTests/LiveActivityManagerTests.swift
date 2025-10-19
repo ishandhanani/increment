@@ -19,7 +19,7 @@ struct LiveActivityManagerTests {
 
         await manager.startActivity(
             workoutName: "Test Workout",
-            exerciseName: "Bench Press",
+            exerciseId: "Bench Press",
             currentSet: 1,
             totalSets: 3,
             nextWeight: 135.0,
@@ -42,7 +42,7 @@ struct LiveActivityManagerTests {
         // Start activity first
         await manager.startActivity(
             workoutName: "Test Workout",
-            exerciseName: "Squat",
+            exerciseId: "Squat",
             currentSet: 1,
             totalSets: 4,
             nextWeight: 225.0,
@@ -53,7 +53,7 @@ struct LiveActivityManagerTests {
 
         // Update with rest timer
         await manager.updateActivity(
-            exerciseName: "Squat",
+            exerciseId: "Squat",
             currentSet: 2,
             totalSets: 4,
             restTimeRemaining: 90,
@@ -78,7 +78,7 @@ struct LiveActivityManagerTests {
 
         await manager.startActivity(
             workoutName: "Test Workout",
-            exerciseName: "Deadlift",
+            exerciseId: "Deadlift",
             currentSet: 1,
             totalSets: 3,
             nextWeight: 315.0,
@@ -104,7 +104,7 @@ struct LiveActivityManagerTests {
 
         await manager.startActivity(
             workoutName: "Test Workout",
-            exerciseName: "Overhead Press",
+            exerciseId: "Overhead Press",
             currentSet: 1,
             totalSets: 3,
             nextWeight: 95.0,
@@ -115,7 +115,7 @@ struct LiveActivityManagerTests {
 
         // Fire multiple updates rapidly
         async let update1: Void = manager.updateActivity(
-            exerciseName: "Overhead Press",
+            exerciseId: "Overhead Press",
             currentSet: 1,
             totalSets: 3,
             restTimeRemaining: 90,
@@ -127,7 +127,7 @@ struct LiveActivityManagerTests {
         )
 
         async let update2: Void = manager.updateActivity(
-            exerciseName: "Overhead Press",
+            exerciseId: "Overhead Press",
             currentSet: 1,
             totalSets: 3,
             restTimeRemaining: 89,
@@ -139,7 +139,7 @@ struct LiveActivityManagerTests {
         )
 
         async let update3: Void = manager.updateActivity(
-            exerciseName: "Overhead Press",
+            exerciseId: "Overhead Press",
             currentSet: 1,
             totalSets: 3,
             restTimeRemaining: 88,
@@ -166,7 +166,7 @@ struct LiveActivityManagerTests {
         // Start first activity
         await manager.startActivity(
             workoutName: "Morning Workout",
-            exerciseName: "Bench Press",
+            exerciseId: "Bench Press",
             currentSet: 1,
             totalSets: 3,
             nextWeight: 135.0,
@@ -180,7 +180,7 @@ struct LiveActivityManagerTests {
         // Start second activity (should end first)
         await manager.startActivity(
             workoutName: "Evening Workout",
-            exerciseName: "Squat",
+            exerciseId: "Squat",
             currentSet: 1,
             totalSets: 4,
             nextWeight: 225.0,
@@ -204,7 +204,7 @@ struct LiveActivityManagerTests {
 
         // Try to update - should not crash
         await manager.updateActivity(
-            exerciseName: "Squat",
+            exerciseId: "Squat",
             currentSet: 2,
             totalSets: 4,
             restTimeRemaining: 90,

@@ -66,9 +66,9 @@ extension SessionManager {
     // MARK: - Exercise Progression
 
     /// Get progression data for a specific exercise
-    /// - Parameter exerciseId: ID of the exercise to track
+    /// - Parameter exerciseId: Name of the exercise to track
     /// - Returns: Array of progression data points
-    public func progressionData(for exerciseId: UUID) -> [ExerciseProgress] {
+    public func progressionData(for exerciseId: String) -> [ExerciseProgress] {
         return AnalyticsEngine.generateExerciseProgression(
             exerciseId: exerciseId,
             sessions: allSessions
@@ -76,9 +76,9 @@ extension SessionManager {
     }
 
     /// Get summary statistics for a specific exercise
-    /// - Parameter exerciseId: ID of the exercise
+    /// - Parameter exerciseId: Name of the exercise
     /// - Returns: Exercise summary with stats
-    public func exerciseSummary(for exerciseId: UUID) -> ExerciseSummary? {
+    public func exerciseSummary(for exerciseId: String) -> ExerciseSummary? {
         guard let profile = exerciseProfiles[exerciseId] else { return nil }
 
         let exerciseSessions = allSessions.filter { session in
@@ -121,7 +121,6 @@ extension SessionManager {
         let lastWorkout = exerciseSessions.sorted { $0.date > $1.date }.first?.date
 
         return ExerciseSummary(
-            exerciseId: exerciseId,
             name: profile.name,
             currentWeight: currentWeight,
             startingWeight: startingWeight,
@@ -134,11 +133,11 @@ extension SessionManager {
 
     /// List of all exercises that have been performed
     public var exercisesPerformed: [ExerciseProfile] {
-        let performedIds = Set(allSessions.flatMap { session in
+        let performedNames = Set(allSessions.flatMap { session in
             session.exerciseLogs.map { $0.exerciseId }
         })
 
-        return performedIds.compactMap { exerciseProfiles[$0] }
+        return performedNames.compactMap { exerciseProfiles[$0] }
     }
 
     // MARK: - Performance Insights

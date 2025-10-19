@@ -14,7 +14,7 @@ public class LiveActivityManager {
     /// Start a Live Activity for the workout session
     public func startActivity(
         workoutName: String,
-        exerciseName: String,
+        exerciseId: String,
         currentSet: Int,
         totalSets: Int,
         nextWeight: Double,
@@ -37,7 +37,7 @@ public class LiveActivityManager {
         let attributes = WorkoutLiveActivityAttributes(workoutName: workoutName)
 
         let initialState = WorkoutLiveActivityAttributes.ContentState(
-            currentExercise: exerciseName,
+            currentExercise: exerciseId,
             currentSet: currentSet,
             totalSets: totalSets,
             restTimeRemaining: nil,
@@ -62,7 +62,7 @@ public class LiveActivityManager {
 
     /// Update the Live Activity with new state
     public func updateActivity(
-        exerciseName: String,
+        exerciseId: String,
         currentSet: Int,
         totalSets: Int,
         restTimeRemaining: Int?,
@@ -78,7 +78,7 @@ public class LiveActivityManager {
         }
 
         let updatedState = WorkoutLiveActivityAttributes.ContentState(
-            currentExercise: exerciseName,
+            currentExercise: exerciseId,
             currentSet: currentSet,
             totalSets: totalSets,
             restTimeRemaining: restTimeRemaining,

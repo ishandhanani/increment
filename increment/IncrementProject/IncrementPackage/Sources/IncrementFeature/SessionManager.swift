@@ -19,8 +19,8 @@ public class SessionManager {
 
     // MARK: - Data
 
-    public var exerciseProfiles: [UUID: ExerciseProfile] = [:]  // Still needed for STEEL lookups
-    public var exerciseStates: [UUID: ExerciseState] = [:]
+    public var exerciseProfiles: [String: ExerciseProfile] = [:]  // Keyed by exercise name
+    public var exerciseStates: [String: ExerciseState] = [:]  // Keyed by exercise name
 
     // Workout system
     public var workoutCycle: WorkoutCycle?
@@ -78,22 +78,14 @@ public class SessionManager {
 
         AppLogger.session.notice("Resuming session")
 
-        // IMPORTANT: Restore workout data from session-scoped storage
-        if let template = session.workoutTemplate,
-           let sessionProfiles = session.exerciseProfilesForSession {
-            AppLogger.session.info("Restoring workout data from session storage")
+        // Restore workout data from template (always regenerate profiles)
+        if let template = session.workoutTemplate {
+            AppLogger.session.info("Restoring workout data from template: \(template.name, privacy: .public)")
             currentWorkoutTemplate = template
-            exerciseProfiles = sessionProfiles
-            AppLogger.session.debug("Restored \(sessionProfiles.count) exercise profiles and workout template")
-        } else if let template = session.workoutTemplate {
-            // Fallback: regenerate profiles from template if missing
-            AppLogger.session.notice("Session profiles missing, regenerating from template: \(template.name, privacy: .public)")
-            let profiles = WorkoutTemplateConverter.toExerciseProfiles(from: template)
-            currentWorkoutTemplate = template
-            exerciseProfiles = profiles
-            AppLogger.session.debug("Generated \(profiles.count) exercise profiles from template")
+            exerciseProfiles = WorkoutTemplateConverter.toExerciseProfiles(from: template)
+            AppLogger.session.debug("Generated \(self.exerciseProfiles.count) exercise profiles from template")
         } else {
-            AppLogger.session.error("No workout data available for resume")
+            AppLogger.session.error("No workout template available for resume")
             return
         }
 
@@ -140,17 +132,13 @@ public class SessionManager {
             // Exercise was started but not logged yet - create a new log
             let exercises = template.exercises.sorted(by: { $0.order < $1.order })
             let exercise = exercises[currentExerciseIndex]
-            // Find exercise ID by name
-            if let exerciseId = exerciseProfiles.first(where: { $0.value.name == exercise.lift.name })?.key {
-                let startWeight = exerciseStates[exerciseId]?.lastStartLoad ?? 45.0
-                currentExerciseLog = ExerciseSessionLog(
-                    exerciseId: exerciseId,
-                    startWeight: startWeight
-                )
-                AppLogger.session.debug("Created new exercise log for resumed session")
-            } else {
-                AppLogger.session.error("No exercise profile found for exercise in plan")
-            }
+            let exerciseId = exercise.lift.id
+            let startWeight = exerciseStates[exerciseId]?.lastStartLoad ?? 45.0
+            currentExerciseLog = ExerciseSessionLog(
+                exerciseId: exerciseId,
+                startWeight: startWeight
+            )
+            AppLogger.session.debug("Created new exercise log for resumed session: \(exerciseId, privacy: .public)")
         } else {
             AppLogger.session.error("Could not restore exercise log - no valid source")
         }
@@ -317,7 +305,7 @@ public class SessionManager {
         // Convert template to ExerciseProfiles for STEEL compatibility
         let profiles = WorkoutTemplateConverter.toExerciseProfiles(from: template)
 
-        // Update session with template and profiles
+        // Update session with template
         if let oldSession = currentSession {
             currentSession = Session(
                 id: oldSession.id,
@@ -326,8 +314,7 @@ public class SessionManager {
                 exerciseLogs: oldSession.exerciseLogs,
                 stats: oldSession.stats,
                 synced: oldSession.synced,
-                workoutTemplate: template,  // Store template directly
-                exerciseProfilesForSession: profiles,
+                workoutTemplate: template,
                 isActive: oldSession.isActive,
                 currentExerciseIndex: oldSession.currentExerciseIndex,
                 currentSetIndex: oldSession.currentSetIndex,
@@ -362,10 +349,9 @@ public class SessionManager {
 
         // Start first exercise
         guard let template = currentSession?.workoutTemplate,
-              let firstExercise = template.exercises.sorted(by: { $0.order < $1.order }).first,
-              let firstExerciseId = exerciseProfiles.first(where: { $0.value.name == firstExercise.lift.name })?.key else { return }
+              let firstExercise = template.exercises.sorted(by: { $0.order < $1.order }).first else { return }
 
-        startExercise(exerciseId: firstExerciseId)
+        startExercise(exerciseId: firstExercise.lift.id)
     }
 
     public func finishStretching() {
@@ -378,17 +364,16 @@ public class SessionManager {
         // Start first exercise
         guard let session = currentSession,
               let template = session.workoutTemplate,
-              let firstExercise = template.exercises.sorted(by: { $0.order < $1.order }).first,
-              let firstExerciseId = exerciseProfiles.first(where: { $0.value.name == firstExercise.lift.name })?.key else {
+              let firstExercise = template.exercises.sorted(by: { $0.order < $1.order }).first else {
             AppLogger.session.error("Cannot finish stretching - workout template not found")
             return
         }
 
-        AppLogger.session.notice("Starting first exercise")
-        startExercise(exerciseId: firstExerciseId)
+        AppLogger.session.notice("Starting first exercise: \(firstExercise.lift.name, privacy: .public)")
+        startExercise(exerciseId: firstExercise.lift.id)
     }
 
-    public func startExercise(exerciseId: UUID) {
+    public func startExercise(exerciseId: String) {
         guard let profile = exerciseProfiles[exerciseId] else { return }
 
         // Get starting weight from state or use default
@@ -416,7 +401,7 @@ public class SessionManager {
         // Update Live Activity
         Task {
             await updateLiveActivity(
-                exerciseName: profile.name,
+                exerciseId: profile.name,
                 currentSet: 1,
                 totalSets: profile.sets,
                 restTimeRemaining: nil,
@@ -514,7 +499,8 @@ public class SessionManager {
         restTimer?.stop()
         restTimer = nil
 
-        guard let profile = exerciseProfiles[currentExerciseLog?.exerciseId ?? UUID()] else { return }
+        guard let exerciseId = currentExerciseLog?.exerciseId,
+              let profile = exerciseProfiles[exerciseId] else { return }
 
         if currentSetIndex < profile.sets {
             sessionState = .workingSet
@@ -551,7 +537,7 @@ public class SessionManager {
 
                 Task { @MainActor in
                     await self.updateLiveActivity(
-                        exerciseName: profile.name,
+                        exerciseId: profile.name,
                         currentSet: self.currentSetIndex + 1,
                         totalSets: profile.sets,
                         restTimeRemaining: remaining,
@@ -627,9 +613,7 @@ public class SessionManager {
         let exercises = template.exercises.sorted(by: { $0.order < $1.order })
         if currentExerciseIndex < exercises.count {
             let nextExercise = exercises[currentExerciseIndex]
-            // Find the exercise ID by name lookup
-            guard let nextExerciseId = exerciseProfiles.first(where: { $0.value.name == nextExercise.lift.name })?.key else { return }
-            startExercise(exerciseId: nextExerciseId)
+            startExercise(exerciseId: nextExercise.lift.id)
         } else {
             finishSession()
         }
@@ -694,7 +678,7 @@ public class SessionManager {
         nextPrescription = (reps: result.nextReps, weight: result.nextWeight)
     }
 
-    private func getRecentLoads(exerciseId: UUID) -> [Double] {
+    private func getRecentLoads(exerciseId: String) -> [Double] {
         // Get all sessions from persistence
         let allSessions = PersistenceManager.shared.loadSessions()
 
@@ -721,7 +705,7 @@ public class SessionManager {
         return startWeights
     }
 
-    private func updateExerciseState(exerciseId: UUID, startLoad: Double, decision: SessionDecision) {
+    private func updateExerciseState(exerciseId: String, startLoad: Double, decision: SessionDecision) {
         exerciseStates[exerciseId] = ExerciseState(
             exerciseId: exerciseId,
             lastStartLoad: startLoad,
@@ -802,11 +786,8 @@ public class SessionManager {
     private func loadDefaultWorkoutCycle() {
         AppLogger.session.debug("Initializing workout cycle with dynamic generation")
 
-        // Initialize empty cycle - templates will be generated on-demand
-        workoutCycle = WorkoutCycle(
-            templates: [],  // Empty - we'll generate dynamically
-            lastCompletedType: nil
-        )
+        // Initialize cycle - templates are generated on-demand
+        workoutCycle = WorkoutCycle(lastCompletedType: nil)
 
         AppLogger.session.info("Workout cycle initialized for dynamic generation")
     }
@@ -814,7 +795,7 @@ public class SessionManager {
     // MARK: - Live Activity Helpers
 
     private func updateLiveActivity(
-        exerciseName: String,
+        exerciseId: String,
         currentSet: Int,
         totalSets: Int,
         restTimeRemaining: Int?,
@@ -833,7 +814,7 @@ public class SessionManager {
         // Start or update activity
         if liveActivityManager.hasActiveActivity {
             await liveActivityManager.updateActivity(
-                exerciseName: exerciseName,
+                exerciseId: exerciseId,
                 currentSet: currentSet,
                 totalSets: totalSets,
                 restTimeRemaining: restTimeRemaining,
@@ -846,7 +827,7 @@ public class SessionManager {
         } else {
             await liveActivityManager.startActivity(
                 workoutName: template.name,
-                exerciseName: exerciseName,
+                exerciseId: exerciseId,
                 currentSet: currentSet,
                 totalSets: totalSets,
                 nextWeight: nextWeight,
@@ -866,7 +847,7 @@ public class SessionManager {
 
         let exercisesCompleted = session.exerciseLogs.count
         let totalExercises = template.exercises.count
-        let finalExercise = exercisesCompleted > 0 ? session.exerciseLogs.last.flatMap { exerciseProfiles[$0.exerciseId]?.name } : nil
+        let finalExercise = exercisesCompleted > 0 ? session.exerciseLogs.last?.exerciseId : nil
 
         await liveActivityManager.endActivity(
             finalExercise: finalExercise,

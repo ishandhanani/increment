@@ -117,7 +117,7 @@ class PersistenceManager {
 
     // MARK: - Exercise States
 
-    func saveExerciseStates(_ states: [UUID: ExerciseState]) {
+    func saveExerciseStates(_ states: [String: ExerciseState]) {
         do {
             let data = try encoder.encode(states)
             userDefaults.set(data, forKey: Keys.exerciseStates)
@@ -128,14 +128,14 @@ class PersistenceManager {
         }
     }
 
-    func loadExerciseStates() -> [UUID: ExerciseState] {
+    func loadExerciseStates() -> [String: ExerciseState] {
         guard let data = userDefaults.data(forKey: Keys.exerciseStates) else {
             logger.debug("No exercise states data found")
             return [:]
         }
 
         do {
-            let states = try decoder.decode([UUID: ExerciseState].self, from: data)
+            let states = try decoder.decode([String: ExerciseState].self, from: data)
             logger.debug("Successfully loaded \(states.count) exercise states")
             return states
         } catch {

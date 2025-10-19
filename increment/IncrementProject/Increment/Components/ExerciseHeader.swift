@@ -2,7 +2,7 @@ import SwiftUI
 import IncrementFeature
 
 struct ExerciseHeader: View {
-    let exerciseName: String
+    let exerciseName: String  // Display name like "Barbell Bench Press"
     let setInfo: String
     let goal: String
     let weight: Double

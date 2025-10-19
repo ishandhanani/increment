@@ -94,7 +94,7 @@ public struct AnalyticsEngine {
     /// - Returns: Array of volume by category with percentages
     public static func calculateVolumeByCategory(
         sessions: [Session],
-        profiles: [UUID: ExerciseProfile]
+        profiles: [String: ExerciseProfile]
     ) -> [VolumeByCategory] {
         var categoryVolumes: [ExerciseCategory: Double] = [:]
 
@@ -128,11 +128,11 @@ public struct AnalyticsEngine {
 
     /// Generates progression data for a specific exercise
     /// - Parameters:
-    ///   - exerciseId: ID of the exercise to track
+    ///   - exerciseId: Name of the exercise to track
     ///   - sessions: All workout sessions
     /// - Returns: Array of progression data points
     public static func generateExerciseProgression(
-        exerciseId: UUID,
+        exerciseId: String,
         sessions: [Session]
     ) -> [ExerciseProgress] {
         let sortedSessions = sessions.sorted { $0.date < $1.date }
@@ -257,10 +257,10 @@ public struct AnalyticsEngine {
     /// - Returns: Insight about most consistent exercise
     public static func identifyMostConsistentExercise(
         sessions: [Session],
-        profiles: [UUID: ExerciseProfile]
+        profiles: [String: ExerciseProfile]
     ) -> PerformanceInsight? {
-        var exerciseUpDecisions: [UUID: Int] = [:]
-        var exerciseTotalSessions: [UUID: Int] = [:]
+        var exerciseUpDecisions: [String: Int] = [:]
+        var exerciseTotalSessions: [String: Int] = [:]
 
         for session in sessions {
             for exerciseLog in session.exerciseLogs {
@@ -275,7 +275,7 @@ public struct AnalyticsEngine {
         }
 
         // Calculate consistency percentage
-        var consistencyScores: [(exerciseId: UUID, score: Double)] = []
+        var consistencyScores: [(exerciseId: String, score: Double)] = []
         for (exerciseId, upCount) in exerciseUpDecisions {
             let totalSessions = exerciseTotalSessions[exerciseId] ?? 1
             let score = Double(upCount) / Double(totalSessions)

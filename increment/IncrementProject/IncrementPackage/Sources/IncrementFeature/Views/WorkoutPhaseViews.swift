@@ -65,7 +65,7 @@ struct WarmupView: View {
             if let exerciseLog = sessionManager.currentExerciseLog,
                let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId] {
                 ExerciseHeader(
-                    exerciseName: profile.name,
+                    exerciseId: profile.name,
                     setInfo: "Warmup",
                     goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
                     weight: exerciseLog.startWeight,
@@ -120,7 +120,7 @@ struct LoadView: View {
                let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId],
                let prescription = sessionManager.nextPrescription {
                 ExerciseHeader(
-                    exerciseName: profile.name,
+                    exerciseId: profile.name,
                     setInfo: "Set 1/\(profile.sets)",
                     goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
                     weight: prescription.weight,
@@ -185,7 +185,7 @@ struct WorkingSetView: View {
                let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId],
                let prescription = sessionManager.nextPrescription {
                 ExerciseHeader(
-                    exerciseName: profile.name,
+                    exerciseId: profile.name,
                     setInfo: "Set \(sessionManager.currentSetIndex + 1)/\(profile.sets)",
                     goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
                     weight: prescription.weight,
