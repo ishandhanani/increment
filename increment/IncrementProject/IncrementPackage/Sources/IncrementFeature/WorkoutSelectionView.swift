@@ -8,54 +8,52 @@ public struct WorkoutSelectionView: View {
     }
 
     public var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        VStack(spacing: 0) {
+            // Back button header
+            HStack {
+                Button {
+                    sessionManager.cancelWorkoutSelection()
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("←")
+                            .font(.system(.body, design: .monospaced))
+                        Text("Cancel")
+                            .font(.system(.body, design: .monospaced))
+                    }
+                    .foregroundColor(.white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .padding(20)
 
-            VStack(spacing: 40) {
+                Spacer()
+            }
+
+            VStack(spacing: 24) {
                 Spacer()
 
                 // Workout Type Display
                 VStack(spacing: 16) {
                     Text("Today's Workout")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
+                        .font(.system(.body, design: .monospaced))
+                        .opacity(0.7)
 
                     Text(suggestedType.rawValue.uppercased())
-                        .font(.system(size: 72, weight: .black, design: .default))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 48, weight: .bold, design: .monospaced))
+                        .foregroundColor(.white)
                 }
 
                 Spacer()
 
-                // Action Buttons
-                VStack(spacing: 16) {
-                    Button {
-                        sessionManager.confirmWorkoutStart()
-                    } label: {
-                        Text("START WORKOUT")
-                            .font(.headline)
-                            .foregroundStyle(.black)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Color.green)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-
-                    Button {
-                        sessionManager.cancelWorkoutSelection()
-                    } label: {
-                        Text("CANCEL")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Color.gray.opacity(0.3))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
+                // Action Bar
+                ActionBar {
+                    sessionManager.confirmWorkoutStart()
+                } label: {
+                    Text("START WORKOUT")
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(red: 0.1, green: 0.15, blue: 0.3))
+        .foregroundColor(.white)
     }
 }
