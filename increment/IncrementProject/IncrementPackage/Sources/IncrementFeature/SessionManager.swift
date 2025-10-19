@@ -19,11 +19,10 @@ public class SessionManager {
 
     // MARK: - Data
 
-    public var workoutPlans: [WorkoutPlan] = []
-    public var exerciseProfiles: [UUID: ExerciseProfile] = [:]
+    public var exerciseProfiles: [UUID: ExerciseProfile] = [:]  // Still needed for STEEL lookups
     public var exerciseStates: [UUID: ExerciseState] = [:]
 
-    // New workout system
+    // Workout system
     public var workoutCycle: WorkoutCycle?
     public var currentWorkoutTemplate: WorkoutTemplate?
 
@@ -52,8 +51,6 @@ public class SessionManager {
     // MARK: - Initialization
 
     public init() {
-        loadDefaultExercises()
-        loadDefaultWorkoutPlan()
         loadDefaultWorkoutCycle()
         loadPersistedState()
     }
@@ -82,19 +79,19 @@ public class SessionManager {
         AppLogger.session.notice("Resuming session")
 
         // IMPORTANT: Restore workout data from session-scoped storage
-        if let sessionPlan = session.workoutPlan,
+        if let template = session.workoutTemplate,
            let sessionProfiles = session.exerciseProfilesForSession {
             AppLogger.session.info("Restoring workout data from session storage")
-            workoutPlans = [sessionPlan]
+            currentWorkoutTemplate = template
             exerciseProfiles = sessionProfiles
-            AppLogger.session.debug("Restored \(sessionProfiles.count) exercise profiles and workout plan")
-        } else if let template = currentWorkoutTemplate {
-            // Fallback: regenerate from template if session data is missing
-            AppLogger.session.notice("Session data missing, regenerating from template: \(template.name, privacy: .public)")
-            let (plan, profiles) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
-            workoutPlans = [plan]
+            AppLogger.session.debug("Restored \(sessionProfiles.count) exercise profiles and workout template")
+        } else if let template = session.workoutTemplate {
+            // Fallback: regenerate profiles from template if missing
+            AppLogger.session.notice("Session profiles missing, regenerating from template: \(template.name, privacy: .public)")
+            let profiles = WorkoutTemplateConverter.toExerciseProfiles(from: template)
+            currentWorkoutTemplate = template
             exerciseProfiles = profiles
-            AppLogger.session.debug("Generated \(profiles.count) exercise profiles and workout plan")
+            AppLogger.session.debug("Generated \(profiles.count) exercise profiles from template")
         } else {
             AppLogger.session.error("No workout data available for resume")
             return
@@ -138,11 +135,13 @@ public class SessionManager {
             // Fall back to completed exercise log at this index
             currentExerciseLog = session.exerciseLogs[currentExerciseIndex]
             AppLogger.session.debug("Restored exercise log from history at index \(self.currentExerciseIndex)")
-        } else if let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }),
-                  currentExerciseIndex < plan.order.count {
+        } else if let template = session.workoutTemplate,
+                  currentExerciseIndex < template.exercises.count {
             // Exercise was started but not logged yet - create a new log
-            let exerciseId = plan.order[currentExerciseIndex]
-            if exerciseProfiles[exerciseId] != nil {
+            let exercises = template.exercises.sorted(by: { $0.order < $1.order })
+            let exercise = exercises[currentExerciseIndex]
+            // Find exercise ID by name
+            if let exerciseId = exerciseProfiles.first(where: { $0.value.name == exercise.lift.name })?.key {
                 let startWeight = exerciseStates[exerciseId]?.lastStartLoad ?? 45.0
                 currentExerciseLog = ExerciseSessionLog(
                     exerciseId: exerciseId,
@@ -290,17 +289,11 @@ public class SessionManager {
 
         AppLogger.session.debug("Session initialized, workout will be generated after pre-workout feeling")
 
-        // Create a temporary session (UUID will be replaced when template is generated)
-        currentSession = Session(workoutPlanId: UUID())
+        // Create a temporary session (template will be added after pre-workout feeling)
+        currentSession = Session()
 
         // Show pre-workout feeling screen
         sessionState = .preWorkout
-    }
-
-    // DEPRECATED: Old method for backward compatibility
-    public func startSession(workoutPlanId: UUID) {
-        AppLogger.session.debug("Legacy startSession method called, redirecting to new flow")
-        startSession()
     }
 
     public func logPreWorkoutFeeling(_ feeling: PreWorkoutFeeling) {
@@ -321,20 +314,19 @@ public class SessionManager {
     public func startWorkoutFromTemplate() {
         guard let template = currentWorkoutTemplate else { return }
 
-        // Convert template to WorkoutPlan + ExerciseProfiles ONCE for this session
-        let (plan, profiles) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
+        // Convert template to ExerciseProfiles for STEEL compatibility
+        let profiles = WorkoutTemplateConverter.toExerciseProfiles(from: template)
 
-        // Create a new session with the correct workoutPlanId
+        // Update session with template and profiles
         if let oldSession = currentSession {
             currentSession = Session(
                 id: oldSession.id,
                 date: oldSession.date,
-                workoutPlanId: plan.id,  // Use the generated plan's ID
                 preWorkoutFeeling: oldSession.preWorkoutFeeling,
                 exerciseLogs: oldSession.exerciseLogs,
                 stats: oldSession.stats,
                 synced: oldSession.synced,
-                workoutPlan: plan,
+                workoutTemplate: template,  // Store template directly
                 exerciseProfilesForSession: profiles,
                 isActive: oldSession.isActive,
                 currentExerciseIndex: oldSession.currentExerciseIndex,
@@ -345,11 +337,10 @@ public class SessionManager {
             )
         }
 
-        // Also populate the working dictionaries for this session
+        // Populate working dictionary for STEEL lookups
         exerciseProfiles = profiles
-        workoutPlans = [plan]
 
-        AppLogger.session.info("Workout plan created with \(profiles.count) exercises")
+        AppLogger.session.info("Workout template stored with \(profiles.count) exercises")
 
         // Start stretching phase
         startStretchingPhase()
@@ -370,8 +361,9 @@ public class SessionManager {
         restTimer = nil
 
         // Start first exercise
-        guard let plan = workoutPlans.first(where: { $0.id == currentSession?.workoutPlanId ?? UUID() }),
-              let firstExerciseId = plan.order.first else { return }
+        guard let template = currentSession?.workoutTemplate,
+              let firstExercise = template.exercises.sorted(by: { $0.order < $1.order }).first,
+              let firstExerciseId = exerciseProfiles.first(where: { $0.value.name == firstExercise.lift.name })?.key else { return }
 
         startExercise(exerciseId: firstExerciseId)
     }
@@ -385,9 +377,10 @@ public class SessionManager {
 
         // Start first exercise
         guard let session = currentSession,
-              let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }),
-              let firstExerciseId = plan.order.first else {
-            AppLogger.session.error("Cannot finish stretching - workout plan not found")
+              let template = session.workoutTemplate,
+              let firstExercise = template.exercises.sorted(by: { $0.order < $1.order }).first,
+              let firstExerciseId = exerciseProfiles.first(where: { $0.value.name == firstExercise.lift.name })?.key else {
+            AppLogger.session.error("Cannot finish stretching - workout template not found")
             return
         }
 
@@ -590,14 +583,23 @@ public class SessionManager {
 
         // Compute next session start weight
         let recentLoads = getRecentLoads(exerciseId: exerciseLog.exerciseId)
+
+        // Package profile config as SteelConfig
+        let steelConfig = SteelConfig(
+            repRange: profile.repRange,
+            baseIncrement: profile.baseIncrement,
+            rounding: profile.rounding,
+            microAdjustStep: profile.microAdjustStep,
+            weeklyCapPct: profile.weeklyCapPct,
+            plateOptions: profile.plateOptions,
+            warmupRule: profile.warmupRule
+        )
+
         let result = SteelProgressionEngine.computeNextSessionWeight(
             lastStartLoad: exerciseLog.startWeight,
             decision: decision,
-            baseIncrement: profile.baseIncrement,
-            rounding: profile.rounding,
-            weeklyCapPct: profile.weeklyCapPct,
-            recentLoads: recentLoads,
-            plateOptions: profile.plateOptions
+            config: steelConfig,
+            recentLoads: recentLoads
         )
 
         exerciseLog.nextStartWeight = result.startWeight
@@ -618,12 +620,15 @@ public class SessionManager {
 
     public func advanceToNextExercise() {
         guard let session = currentSession,
-              let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }) else { return }
+              let template = session.workoutTemplate else { return }
 
         currentExerciseIndex += 1
 
-        if currentExerciseIndex < plan.order.count {
-            let nextExerciseId = plan.order[currentExerciseIndex]
+        let exercises = template.exercises.sorted(by: { $0.order < $1.order })
+        if currentExerciseIndex < exercises.count {
+            let nextExercise = exercises[currentExerciseIndex]
+            // Find the exercise ID by name lookup
+            guard let nextExerciseId = exerciseProfiles.first(where: { $0.value.name == nextExercise.lift.name })?.key else { return }
             startExercise(exerciseId: nextExerciseId)
         } else {
             finishSession()
@@ -783,8 +788,8 @@ public class SessionManager {
                 // Keep session for potential resume
                 currentSession = savedSession
 
-                // Try to restore the workout template from the session's workoutPlanId
-                if let template = workoutCycle?.templates.first(where: { $0.id == savedSession.workoutPlanId }) {
+                // Restore the workout template from the session
+                if let template = savedSession.workoutTemplate {
                     currentWorkoutTemplate = template
                     AppLogger.session.info("Restored workout template: \(template.name, privacy: .public)")
                 }
@@ -793,16 +798,6 @@ public class SessionManager {
     }
 
     // MARK: - Default Data
-
-    private func loadDefaultExercises() {
-        // Deprecated: Now using workout templates instead
-        AppLogger.session.debug("Skipping legacy exercise loading")
-    }
-
-    private func loadDefaultWorkoutPlan() {
-        // Deprecated: Now using workout templates instead
-        AppLogger.session.debug("Skipping legacy workout plan loading")
-    }
 
     private func loadDefaultWorkoutCycle() {
         AppLogger.session.debug("Initializing workout cycle with dynamic generation")
@@ -826,13 +821,13 @@ public class SessionManager {
         isResting: Bool
     ) async {
         guard let session = currentSession,
-              let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }) else {
+              let template = session.workoutTemplate else {
             return
         }
 
         let nextWeight = nextPrescription?.weight ?? 0
         let nextReps = nextPrescription?.reps ?? 0
-        let totalExercises = plan.order.count
+        let totalExercises = template.exercises.count
         let exercisesCompleted = session.exerciseLogs.count
 
         // Start or update activity
@@ -850,7 +845,7 @@ public class SessionManager {
             )
         } else {
             await liveActivityManager.startActivity(
-                workoutName: plan.name,
+                workoutName: template.name,
                 exerciseName: exerciseName,
                 currentSet: currentSet,
                 totalSets: totalSets,
@@ -864,13 +859,13 @@ public class SessionManager {
 
     public func endLiveActivity() async {
         guard let session = currentSession,
-              let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }) else {
+              let template = session.workoutTemplate else {
             await liveActivityManager.endActivity()
             return
         }
 
         let exercisesCompleted = session.exerciseLogs.count
-        let totalExercises = plan.order.count
+        let totalExercises = template.exercises.count
         let finalExercise = exercisesCompleted > 0 ? session.exerciseLogs.last.flatMap { exerciseProfiles[$0.exerciseId]?.name } : nil
 
         await liveActivityManager.endActivity(

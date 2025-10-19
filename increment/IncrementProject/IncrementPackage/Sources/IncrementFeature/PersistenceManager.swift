@@ -16,7 +16,6 @@ class PersistenceManager {
         static let sessions = "increment.sessions"
         static let exerciseStates = "increment.exerciseStates"
         static let exerciseProfiles = "increment.exerciseProfiles"
-        static let workoutPlans = "increment.workoutPlans"
         static let currentSession = "increment.currentSession"
     }
 
@@ -176,43 +175,12 @@ class PersistenceManager {
         }
     }
 
-    // MARK: - Workout Plans
-
-    func saveWorkoutPlans(_ plans: [WorkoutPlan]) {
-        do {
-            let data = try encoder.encode(plans)
-            userDefaults.set(data, forKey: Keys.workoutPlans)
-            logger.debug("Successfully saved \(plans.count) workout plans")
-        } catch {
-            let persistenceError = PersistenceError.encodingFailed(Keys.workoutPlans, error)
-            logger.error("\(persistenceError.localizedDescription)")
-        }
-    }
-
-    func loadWorkoutPlans() -> [WorkoutPlan] {
-        guard let data = userDefaults.data(forKey: Keys.workoutPlans) else {
-            logger.debug("No workout plans data found")
-            return []
-        }
-
-        do {
-            let plans = try decoder.decode([WorkoutPlan].self, from: data)
-            logger.debug("Successfully loaded \(plans.count) workout plans")
-            return plans
-        } catch {
-            let persistenceError = PersistenceError.decodingFailed(Keys.workoutPlans, error)
-            logger.error("\(persistenceError.localizedDescription)")
-            return []
-        }
-    }
-
     // MARK: - Utilities
 
     func clearAll() {
         userDefaults.removeObject(forKey: Keys.sessions)
         userDefaults.removeObject(forKey: Keys.exerciseStates)
         userDefaults.removeObject(forKey: Keys.exerciseProfiles)
-        userDefaults.removeObject(forKey: Keys.workoutPlans)
         userDefaults.removeObject(forKey: Keys.currentSession)
         userDefaults.synchronize() // Force write to disk
     }
@@ -230,8 +198,7 @@ class PersistenceManager {
         return [
             "sessions": sessions,
             "exerciseStates": loadExerciseStates(),
-            "exerciseProfiles": loadExerciseProfiles(),
-            "workoutPlans": loadWorkoutPlans()
+            "exerciseProfiles": loadExerciseProfiles()
         ]
     }
 }

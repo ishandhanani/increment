@@ -211,15 +211,14 @@ public struct PreWorkoutFeeling: Codable, Sendable {
 public struct Session: Codable, Identifiable, Sendable {
     public let id: UUID
     public let date: Date
-    public let workoutPlanId: UUID
     public var preWorkoutFeeling: PreWorkoutFeeling?
     public var exerciseLogs: [ExerciseSessionLog]
     public var stats: SessionStats
     public var synced: Bool
 
-    // Session-scoped workout data (generated from template once per session)
-    public var workoutPlan: WorkoutPlan?  // The generated plan for this session
-    public var exerciseProfilesForSession: [UUID: ExerciseProfile]?  // Exercise profiles for this session
+    // Session-scoped workout data (stored template for this session)
+    public var workoutTemplate: WorkoutTemplate?
+    public var exerciseProfilesForSession: [UUID: ExerciseProfile]?  // Still needed for STEEL lookup
 
     // Resume state fields
     public var isActive: Bool
@@ -232,12 +231,11 @@ public struct Session: Codable, Identifiable, Sendable {
     public init(
         id: UUID = UUID(),
         date: Date = Date(),
-        workoutPlanId: UUID,
         preWorkoutFeeling: PreWorkoutFeeling? = nil,
         exerciseLogs: [ExerciseSessionLog] = [],
         stats: SessionStats = SessionStats(totalVolume: 0),
         synced: Bool = false,
-        workoutPlan: WorkoutPlan? = nil,
+        workoutTemplate: WorkoutTemplate? = nil,
         exerciseProfilesForSession: [UUID: ExerciseProfile]? = nil,
         isActive: Bool = true,
         currentExerciseIndex: Int? = nil,
@@ -248,12 +246,11 @@ public struct Session: Codable, Identifiable, Sendable {
     ) {
         self.id = id
         self.date = date
-        self.workoutPlanId = workoutPlanId
         self.preWorkoutFeeling = preWorkoutFeeling
         self.exerciseLogs = exerciseLogs
         self.stats = stats
         self.synced = synced
-        self.workoutPlan = workoutPlan
+        self.workoutTemplate = workoutTemplate
         self.exerciseProfilesForSession = exerciseProfilesForSession
         self.isActive = isActive
         self.currentExerciseIndex = currentExerciseIndex
@@ -269,20 +266,6 @@ public struct SessionStats: Codable, Sendable {
 
     public init(totalVolume: Double) {
         self.totalVolume = totalVolume
-    }
-}
-
-// MARK: - WorkoutPlan
-
-public struct WorkoutPlan: Codable, Identifiable, Sendable {
-    public let id: UUID
-    public let name: String
-    public let order: [UUID]  // exerciseIds in order
-
-    public init(id: UUID = UUID(), name: String, order: [UUID]) {
-        self.id = id
-        self.name = name
-        self.order = order
     }
 }
 

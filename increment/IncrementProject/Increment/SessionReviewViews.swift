@@ -41,11 +41,11 @@ struct ReviewView: View {
 
     private func nextButtonLabel() -> String {
         guard let session = sessionManager.currentSession,
-              let plan = sessionManager.workoutPlans.first(where: { $0.id == session.workoutPlanId }) else {
+              let template = session.workoutTemplate else {
             return "NEXT EXERCISE"
         }
 
-        if sessionManager.currentExerciseIndex < plan.order.count - 1 {
+        if sessionManager.currentExerciseIndex < template.exercises.count - 1 {
             return "NEXT EXERCISE"
         } else {
             return "END SESSION"

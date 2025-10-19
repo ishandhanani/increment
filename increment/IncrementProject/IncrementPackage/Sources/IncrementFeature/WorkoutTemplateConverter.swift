@@ -1,7 +1,6 @@
 import Foundation
 
 /// Utilities to convert between new workout models and existing STEEL models
-@MainActor
 struct WorkoutTemplateConverter {
 
     /// Converts a Lift to an ExerciseProfile (maintaining STEEL compatibility)
@@ -48,11 +47,10 @@ struct WorkoutTemplateConverter {
         )
     }
 
-    /// Converts a WorkoutTemplate to a WorkoutPlan and dictionary of ExerciseProfiles
-    /// Returns: (WorkoutPlan, [UUID: ExerciseProfile])
-    static func toWorkoutPlan(from template: WorkoutTemplate) -> (WorkoutPlan, [UUID: ExerciseProfile]) {
+    /// Converts a WorkoutTemplate to dictionary of ExerciseProfiles
+    /// Returns: [UUID: ExerciseProfile]
+    static func toExerciseProfiles(from template: WorkoutTemplate) -> [UUID: ExerciseProfile] {
         var profiles: [UUID: ExerciseProfile] = [:]
-        var exerciseIds: [UUID] = []
 
         // Convert each WorkoutExercise to an ExerciseProfile
         for workoutExercise in template.exercises.sorted(by: { $0.order < $1.order }) {
@@ -62,16 +60,8 @@ struct WorkoutTemplateConverter {
                 restSec: Int(workoutExercise.restTime)
             )
             profiles[profile.id] = profile
-            exerciseIds.append(profile.id)
         }
 
-        // Create WorkoutPlan with same ID as template for consistency
-        let plan = WorkoutPlan(
-            id: template.id,
-            name: template.name,
-            order: exerciseIds
-        )
-
-        return (plan, profiles)
+        return profiles
     }
 }
