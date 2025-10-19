@@ -1,5 +1,6 @@
 @preconcurrency import ActivityKit
 import Foundation
+import OSLog
 
 /// Manages Live Activities for workout sessions
 @MainActor
@@ -53,9 +54,9 @@ public class LiveActivityManager {
                 content: ActivityContent(state: initialState, staleDate: nil)
             )
             currentActivity = activity
-            print("✅ Live Activity started: \(activity.id)")
+            AppLogger.liveActivity.notice("Live Activity started")
         } catch {
-            print("❌ Failed to start Live Activity: \(error.localizedDescription)")
+            AppLogger.liveActivity.error("Failed to start Live Activity: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -72,7 +73,7 @@ public class LiveActivityManager {
         totalExercises: Int
     ) async {
         guard let activity = currentActivity else {
-            print("⚠️ No active Live Activity to update")
+            AppLogger.liveActivity.debug("No active Live Activity to update")
             return
         }
 
@@ -94,7 +95,7 @@ public class LiveActivityManager {
                 staleDate: nil
             )
         )
-        print("🔄 Live Activity updated")
+        AppLogger.liveActivity.debug("Live Activity updated")
     }
 
     /// End the Live Activity with meaningful final state
@@ -126,7 +127,7 @@ public class LiveActivityManager {
         )
 
         currentActivity = nil
-        print("🛑 Live Activity ended")
+        AppLogger.liveActivity.notice("Live Activity ended")
     }
 
     /// Check if there's an active Live Activity

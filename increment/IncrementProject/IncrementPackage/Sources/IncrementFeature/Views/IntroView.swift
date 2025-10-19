@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 
 @MainActor
 struct IntroView: View {
@@ -75,13 +76,11 @@ struct IntroView: View {
             VStack(spacing: 12) {
                 // Start Session Button
                 ActionBar {
-                    print("🎬 START WORKOUT button tapped")
-                    print("🎬 hasResumableSession: \(sessionManager.hasResumableSession)")
+                    AppLogger.ui.debug("START WORKOUT button tapped")
                     // Discard any existing session when starting a new one
                     if sessionManager.hasResumableSession {
                         sessionManager.discardSession()
                     }
-                    print("🎬 Starting new workout from template system")
                     sessionManager.startSession()
                 } label: {
                     Text(sessionManager.hasResumableSession ? "START NEW WORKOUT" : "START WORKOUT")
