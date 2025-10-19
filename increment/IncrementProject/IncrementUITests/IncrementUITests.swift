@@ -53,7 +53,7 @@ final class IncrementUITests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
 
-        print("✅ Button tapped successfully!")
+        // Button tapped successfully
     }
 
     @MainActor
@@ -143,7 +143,7 @@ final class IncrementUITests: XCTestCase {
                 add(attachment3)
             }
 
-            print("✅ Rest timer test completed!")
+            // Rest timer test completed
         }
     }
 }

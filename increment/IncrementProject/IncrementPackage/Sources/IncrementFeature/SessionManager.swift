@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import Observation
+import OSLog
 
 /// Manages the current workout session state
 @Observable
@@ -69,35 +70,33 @@ public class SessionManager {
     }
 
     public func resumeSession() {
-        print("🔄 resumeSession() called")
-        print("🔄 currentSession: \(currentSession != nil)")
-        print("🔄 isActive: \(currentSession?.isActive ?? false)")
+        AppLogger.session.info("Resume session requested, currentSession exists: \(self.currentSession != nil, privacy: .public), isActive: \(self.currentSession?.isActive ?? false, privacy: .public)")
 
         guard let session = currentSession,
               session.isActive,
               !PersistenceManager.shared.isSessionStale(session) else {
-            print("🔄 resumeSession() guard failed")
+            AppLogger.session.debug("Resume session guard failed - no valid session to resume")
             return
         }
 
-        print("🔄 resumeSession() proceeding with resume")
+        AppLogger.session.notice("Resuming session")
 
         // IMPORTANT: Restore workout data from session-scoped storage
         if let sessionPlan = session.workoutPlan,
            let sessionProfiles = session.exerciseProfilesForSession {
-            print("🔄 Restoring workout data from session storage")
+            AppLogger.session.info("Restoring workout data from session storage")
             workoutPlans = [sessionPlan]
             exerciseProfiles = sessionProfiles
-            print("🔄 Restored \(sessionProfiles.count) exercise profiles and workout plan")
+            AppLogger.session.debug("Restored \(sessionProfiles.count) exercise profiles and workout plan")
         } else if let template = currentWorkoutTemplate {
             // Fallback: regenerate from template if session data is missing
-            print("🔄 Session data missing, regenerating from template: \(template.name)")
+            AppLogger.session.notice("Session data missing, regenerating from template: \(template.name, privacy: .public)")
             let (plan, profiles) = WorkoutTemplateConverter.toWorkoutPlan(from: template)
             workoutPlans = [plan]
             exerciseProfiles = profiles
-            print("🔄 Generated \(profiles.count) exercise profiles and workout plan")
+            AppLogger.session.debug("Generated \(profiles.count) exercise profiles and workout plan")
         } else {
-            print("🔄 ERROR: No workout data available for resume")
+            AppLogger.session.error("No workout data available for resume")
             return
         }
 
@@ -114,7 +113,7 @@ public class SessionManager {
         // Restore session state first
         if let stateRaw = session.sessionStateRaw, !stateRaw.isEmpty {
             sessionState = deserializeSessionState(stateRaw) ?? .preWorkout
-            print("🔄 Restored sessionState from raw: \(stateRaw) -> \(sessionState)")
+            AppLogger.session.debug("Restored session state from: \(stateRaw, privacy: .public)")
         } else {
             // Fallback: if no state saved, determine based on session progress
             if session.preWorkoutFeeling != nil && session.exerciseLogs.isEmpty {
@@ -127,18 +126,18 @@ public class SessionManager {
                 // Unknown state - start at pre-workout
                 sessionState = .preWorkout
             }
-            print("🔄 Fallback sessionState set to: \(sessionState)")
+            AppLogger.session.debug("Fallback session state determined")
         }
 
         // Restore current exercise log
         // First try to restore the in-progress exercise log saved in the session
         if let savedLog = session.currentExerciseLog {
             currentExerciseLog = savedLog
-            print("🔄 Restored currentExerciseLog from session: \(savedLog.exerciseId)")
+            AppLogger.session.debug("Restored exercise log from session")
         } else if currentExerciseIndex < session.exerciseLogs.count {
             // Fall back to completed exercise log at this index
             currentExerciseLog = session.exerciseLogs[currentExerciseIndex]
-            print("🔄 Restored currentExerciseLog from exerciseLogs at index \(currentExerciseIndex)")
+            AppLogger.session.debug("Restored exercise log from history at index \(self.currentExerciseIndex)")
         } else if let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }),
                   currentExerciseIndex < plan.order.count {
             // Exercise was started but not logged yet - create a new log
@@ -149,15 +148,13 @@ public class SessionManager {
                     exerciseId: exerciseId,
                     startWeight: startWeight
                 )
-                print("🔄 Created new currentExerciseLog for exerciseId: \(exerciseId)")
+                AppLogger.session.debug("Created new exercise log for resumed session")
             } else {
-                print("🔄 ERROR: No profile found for exerciseId: \(exerciseId)")
+                AppLogger.session.error("No exercise profile found for exercise in plan")
             }
         } else {
-            print("🔄 ERROR: Could not restore currentExerciseLog - no valid source")
+            AppLogger.session.error("Could not restore exercise log - no valid source")
         }
-
-        print("🔄 Final currentExerciseLog: \(currentExerciseLog?.exerciseId.uuidString ?? "nil")")
 
         // Restore prescription from last set log if available
         if let lastSet = currentExerciseLog?.setLogs.last {
@@ -204,7 +201,7 @@ public class SessionManager {
     }
 
     public func discardSession() {
-        print("🗑️ discardSession() called")
+        AppLogger.session.notice("Discarding current session")
         currentSession = nil
         currentExerciseIndex = 0
         currentSetIndex = 0
@@ -214,7 +211,7 @@ public class SessionManager {
         isFirstExercise = true
 
         PersistenceManager.shared.clearCurrentSession()
-        print("🗑️ discardSession() completed, sessionState = .intro")
+        AppLogger.session.info("Session discarded, reset to intro")
     }
 
     private func serializeSessionState(_ state: SessionState) -> String {
@@ -284,15 +281,14 @@ public class SessionManager {
     // MARK: - Session Control
 
     public func startSession() {
-        print("🎯 startSession() called - using dynamic generation system")
+        AppLogger.session.notice("Starting new session with dynamic generation")
 
         // Reset session state
         currentExerciseIndex = 0
         currentSetIndex = 0
         isFirstExercise = true
 
-        // Don't generate template yet - will happen in logPreWorkoutFeeling()
-        print("🎯 Session initialized - workout will be dynamically generated")
+        AppLogger.session.debug("Session initialized, workout will be generated after pre-workout feeling")
 
         // Create a temporary session (UUID will be replaced when template is generated)
         currentSession = Session(workoutPlanId: UUID())
@@ -303,7 +299,7 @@ public class SessionManager {
 
     // DEPRECATED: Old method for backward compatibility
     public func startSession(workoutPlanId: UUID) {
-        print("🎯 DEPRECATED: startSession(workoutPlanId:) called")
+        AppLogger.session.debug("Legacy startSession method called, redirecting to new flow")
         startSession()
     }
 
@@ -312,9 +308,9 @@ public class SessionManager {
 
         // Dynamically generate next workout based on cycle
         let nextType = workoutCycle?.lastCompletedType?.next ?? .push
-        print("🏗️ Dynamically generating workout: \(nextType.rawValue)")
+        AppLogger.session.notice("Generating \(nextType.rawValue, privacy: .public) workout")
         currentWorkoutTemplate = WorkoutBuilder.build(type: nextType)
-        print("🏗️ Generated template: \(currentWorkoutTemplate?.name ?? "nil")")
+        AppLogger.session.info("Workout template generated: \(self.currentWorkoutTemplate?.name ?? "unknown", privacy: .public)")
 
         persistSession()
         sessionState = .workoutOverview
@@ -353,7 +349,7 @@ public class SessionManager {
         exerciseProfiles = profiles
         workoutPlans = [plan]
 
-        print("✅ Generated workout plan with \(profiles.count) exercises for session")
+        AppLogger.session.info("Workout plan created with \(profiles.count) exercises")
 
         // Start stretching phase
         startStretchingPhase()
@@ -381,11 +377,7 @@ public class SessionManager {
     }
 
     public func finishStretching() {
-        print("🏃 finishStretching() called")
-        print("🏃 currentSession: \(currentSession != nil)")
-        print("🏃 currentSession.workoutPlanId: \(currentSession?.workoutPlanId.uuidString ?? "nil")")
-        print("🏃 workoutPlans.count: \(workoutPlans.count)")
-        print("🏃 workoutPlans: \(workoutPlans.map { $0.id.uuidString })")
+        AppLogger.session.info("Finishing stretching phase")
 
         // Stop the stretching timer
         restTimer?.stop()
@@ -395,12 +387,11 @@ public class SessionManager {
         guard let session = currentSession,
               let plan = workoutPlans.first(where: { $0.id == session.workoutPlanId }),
               let firstExerciseId = plan.order.first else {
-            print("❌ finishStretching() failed - cannot find workout plan")
-            print("❌ Specifically: session=\(currentSession != nil), plan found=\(workoutPlans.contains(where: { $0.id == currentSession?.workoutPlanId }))")
+            AppLogger.session.error("Cannot finish stretching - workout plan not found")
             return
         }
 
-        print("✅ finishStretching() starting exercise: \(firstExerciseId)")
+        AppLogger.session.notice("Starting first exercise")
         startExercise(exerciseId: firstExerciseId)
     }
 
@@ -772,14 +763,14 @@ public class SessionManager {
     }
 
     private func loadPersistedState() {
-        print("💾 loadPersistedState() called")
+        AppLogger.session.debug("Loading persisted session state")
 
         // Load exercise states (always needed for progression tracking)
         exerciseStates = PersistenceManager.shared.loadExerciseStates()
 
         // IMPORTANT: Skip loading old workout plans and profiles
         // We're now using the template system exclusively
-        print("💾 Skipping old workout plans and profiles - using template system")
+        AppLogger.session.debug("Using template system, skipping legacy workout plans")
 
         // Load current session if exists
         if let savedSession = PersistenceManager.shared.loadCurrentSession() {
@@ -787,6 +778,7 @@ public class SessionManager {
             if PersistenceManager.shared.isSessionStale(savedSession) {
                 // Clear stale session
                 PersistenceManager.shared.clearCurrentSession()
+                AppLogger.session.info("Cleared stale session")
             } else {
                 // Keep session for potential resume
                 currentSession = savedSession
@@ -794,7 +786,7 @@ public class SessionManager {
                 // Try to restore the workout template from the session's workoutPlanId
                 if let template = workoutCycle?.templates.first(where: { $0.id == savedSession.workoutPlanId }) {
                     currentWorkoutTemplate = template
-                    print("💾 Restored workout template: \(template.name)")
+                    AppLogger.session.info("Restored workout template: \(template.name, privacy: .public)")
                 }
             }
         }
@@ -804,16 +796,16 @@ public class SessionManager {
 
     private func loadDefaultExercises() {
         // Deprecated: Now using workout templates instead
-        print("📋 loadDefaultExercises() skipped - using workout templates")
+        AppLogger.session.debug("Skipping legacy exercise loading")
     }
 
     private func loadDefaultWorkoutPlan() {
         // Deprecated: Now using workout templates instead
-        print("📋 loadDefaultWorkoutPlan() skipped - using workout templates")
+        AppLogger.session.debug("Skipping legacy workout plan loading")
     }
 
     private func loadDefaultWorkoutCycle() {
-        print("📋 loadDefaultWorkoutCycle() called - using dynamic generation")
+        AppLogger.session.debug("Initializing workout cycle with dynamic generation")
 
         // Initialize empty cycle - templates will be generated on-demand
         workoutCycle = WorkoutCycle(
@@ -821,7 +813,7 @@ public class SessionManager {
             lastCompletedType: nil
         )
 
-        print("📋 Workout cycle initialized - templates will be generated dynamically")
+        AppLogger.session.info("Workout cycle initialized for dynamic generation")
     }
 
     // MARK: - Live Activity Helpers

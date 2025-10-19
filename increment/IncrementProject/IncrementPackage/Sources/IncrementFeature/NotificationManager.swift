@@ -1,5 +1,6 @@
 @preconcurrency import UserNotifications
 import Foundation
+import OSLog
 
 /// Manages notification permissions for Live Activities
 @MainActor
@@ -14,10 +15,14 @@ public class NotificationManager {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(
                 options: [.alert, .sound, .badge]
             )
-            print(granted ? "✅ Notification permission granted" : "❌ Notification permission denied")
+            if granted {
+                AppLogger.notifications.notice("Notification permission granted")
+            } else {
+                AppLogger.notifications.info("Notification permission denied by user")
+            }
             return granted
         } catch {
-            print("❌ Failed to request notification permission: \(error.localizedDescription)")
+            AppLogger.notifications.error("Failed to request notification permission: \(error.localizedDescription, privacy: .public)")
             return false
         }
     }
