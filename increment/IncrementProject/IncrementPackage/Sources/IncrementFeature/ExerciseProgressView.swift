@@ -109,29 +109,17 @@ struct ProgressionChart: View {
             if progression.isEmpty {
                 EmptyProgressionMessage()
             } else {
-                Chart(progression) { dataPoint in
-                    // Area fill under line
-                    AreaMark(
-                        x: .value("Date", dataPoint.date),
-                        yStart: .value("Min", progression.map { $0.weight }.min() ?? 0),
-                        yEnd: .value("Weight", dataPoint.weight)
-                    )
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.purple.opacity(0.35), Color.purple.opacity(0.05)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .interpolationMethod(.catmullRom)
+                let minWeight = (progression.map { $0.weight }.min() ?? 0) * 0.9
+                let maxWeight = (progression.map { $0.weight }.max() ?? 100) * 1.05
 
+                Chart(progression) { dataPoint in
                     // Line
                     LineMark(
                         x: .value("Date", dataPoint.date),
                         y: .value("Weight", dataPoint.weight)
                     )
-                    .foregroundStyle(Color.purple.opacity(0.9))
-                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(Color.purple)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                     .interpolationMethod(.catmullRom)
 
                     // Points with decision colors
@@ -142,8 +130,8 @@ struct ProgressionChart: View {
                     .foregroundStyle(colorForDecision(dataPoint.decision))
                     .symbolSize(
                         selectedDate != nil && Calendar.current.isDate(dataPoint.date, inSameDayAs: selectedDate!)
-                            ? 140
-                            : 80
+                            ? 120
+                            : 70
                     )
 
                     // Selection indicator ring
@@ -154,45 +142,46 @@ struct ProgressionChart: View {
                             y: .value("Weight", dataPoint.weight)
                         )
                         .foregroundStyle(.clear)
-                        .symbolSize(180)
+                        .symbolSize(160)
                         .symbol {
                             Circle()
-                                .strokeBorder(Color.white.opacity(0.5), lineWidth: 2)
+                                .strokeBorder(Color.white.opacity(0.6), lineWidth: 2)
                         }
                     }
                 }
                 .chartXSelection(value: $selectedDate)
+                .chartYScale(domain: minWeight...maxWeight)
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                            .foregroundStyle(.white.opacity(0.1))
+                            .foregroundStyle(.white.opacity(0.15))
                         AxisValueLabel()
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.white.opacity(0.7))
                             .font(.system(.caption2, design: .monospaced))
                     }
                 }
                 .chartYAxis {
-                    AxisMarks(position: .leading) { value in
+                    AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                            .foregroundStyle(.white.opacity(0.1))
+                            .foregroundStyle(.white.opacity(0.15))
                         AxisValueLabel {
                             if let weight = value.as(Double.self) {
                                 Text("\(Int(weight)) lb")
                                     .font(.system(.caption2, design: .monospaced))
                             }
                         }
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.white.opacity(0.7))
                     }
                 }
-                .frame(height: 260)
+                .frame(height: 280)
                 .padding(20)
                 .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.white.opacity(0.04))
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white.opacity(0.05))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
 
                 // Selection details

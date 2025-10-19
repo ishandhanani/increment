@@ -5,8 +5,6 @@ import SwiftUI
 @MainActor
 public struct SettingsView: View {
     @Binding var isPresented: Bool
-    @AppStorage("restTimerSound") private var restTimerSound = true
-    @AppStorage("showWorkoutReminders") private var showWorkoutReminders = false
 
     public init(isPresented: Binding<Bool>) {
         self._isPresented = isPresented
@@ -42,21 +40,6 @@ public struct SettingsView: View {
             // Settings Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Workout Settings Section
-                    SettingsSection(title: "WORKOUT") {
-                        SettingToggle(
-                            title: "Rest Timer Sound",
-                            description: "Play sound when rest timer completes",
-                            isOn: $restTimerSound
-                        )
-
-                        SettingToggle(
-                            title: "Workout Reminders",
-                            description: "Get notified to stay consistent",
-                            isOn: $showWorkoutReminders
-                        )
-                    }
-
                     // About Section
                     SettingsSection(title: "ABOUT") {
                         SettingRow(

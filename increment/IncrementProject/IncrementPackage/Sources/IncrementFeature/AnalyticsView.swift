@@ -220,25 +220,12 @@ struct RecentTrendChart: View {
                 EmptyChartMessageView(message: "No workout data yet")
             } else {
                 Chart(trend) { dataPoint in
-                    AreaMark(
-                        x: .value("Date", dataPoint.date),
-                        y: .value("Volume", dataPoint.volume)
-                    )
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.cyan.opacity(0.4), Color.cyan.opacity(0.05)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .interpolationMethod(.catmullRom)
-
                     LineMark(
                         x: .value("Date", dataPoint.date),
                         y: .value("Volume", dataPoint.volume)
                     )
                     .foregroundStyle(Color.cyan)
-                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                     .interpolationMethod(.catmullRom)
 
                     PointMark(
@@ -246,39 +233,40 @@ struct RecentTrendChart: View {
                         y: .value("Volume", dataPoint.volume)
                     )
                     .foregroundStyle(Color.cyan)
-                    .symbolSize(60)
+                    .symbolSize(50)
                 }
+                .chartYScale(domain: 0...(trend.map { $0.volume }.max() ?? 100) * 1.1)
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                            .foregroundStyle(.white.opacity(0.1))
+                            .foregroundStyle(.white.opacity(0.15))
                         AxisValueLabel()
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.white.opacity(0.7))
                             .font(.system(.caption2, design: .monospaced))
                     }
                 }
                 .chartYAxis {
-                    AxisMarks(position: .leading) { value in
+                    AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                            .foregroundStyle(.white.opacity(0.1))
+                            .foregroundStyle(.white.opacity(0.15))
                         AxisValueLabel {
                             if let volume = value.as(Double.self) {
                                 Text(formatVolume(volume))
                                     .font(.system(.caption2, design: .monospaced))
                             }
                         }
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.white.opacity(0.7))
                     }
                 }
-                .frame(height: 240)
-                .padding(24)
+                .frame(height: 260)
+                .padding(20)
                 .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.white.opacity(0.04))
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white.opacity(0.05))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
             }
         }
