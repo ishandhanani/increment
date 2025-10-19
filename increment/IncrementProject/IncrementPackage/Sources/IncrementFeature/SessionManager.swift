@@ -785,49 +785,13 @@ public class SessionManager {
     // MARK: - Default Data
 
     private func loadDefaultExercises() {
-        print("📋 loadDefaultExercises() called")
-        let benchPress = ExerciseProfile(
-            name: "Barbell Bench Press",
-            category: .barbell,
-            priority: .upper,
-            repRange: 5...8,
-            sets: 3,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 5.0,
-            plateOptions: [45, 25, 10, 5, 2.5],
-            defaultRestSec: 90
-        )
-
-        let squat = ExerciseProfile(
-            name: "Barbell Squat",
-            category: .barbell,
-            priority: .lower,
-            repRange: 5...8,
-            sets: 4,
-            baseIncrement: 10.0,
-            rounding: 5.0,
-            microAdjustStep: 5.0,
-            weeklyCapPct: 10.0,
-            plateOptions: [45, 25, 10, 5, 2.5],
-            defaultRestSec: 120
-        )
-
-        exerciseProfiles[benchPress.id] = benchPress
-        exerciseProfiles[squat.id] = squat
-        print("📋 Loaded \(exerciseProfiles.count) default exercises")
+        // Deprecated: Now using workout templates instead
+        print("📋 loadDefaultExercises() skipped - using workout templates")
     }
 
     private func loadDefaultWorkoutPlan() {
-        let exercises = Array(exerciseProfiles.keys)
-        print("📋 loadDefaultWorkoutPlan() called with \(exercises.count) exercises")
-        let defaultPlan = WorkoutPlan(
-            name: "Default Push/Pull",
-            order: exercises
-        )
-        workoutPlans.append(defaultPlan)
-        print("📋 workoutPlans.count after append: \(workoutPlans.count)")
+        // Deprecated: Now using workout templates instead
+        print("📋 loadDefaultWorkoutPlan() skipped - using workout templates")
     }
 
     private func loadDefaultWorkoutTemplates() {

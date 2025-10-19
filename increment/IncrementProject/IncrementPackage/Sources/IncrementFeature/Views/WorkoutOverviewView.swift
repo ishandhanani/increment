@@ -115,7 +115,7 @@ struct WorkoutOverviewView: View {
             .padding(.bottom, 48)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black)
+        .background(Color(red: 0.1, green: 0.15, blue: 0.3))
         .foregroundColor(.white)
     }
 }
