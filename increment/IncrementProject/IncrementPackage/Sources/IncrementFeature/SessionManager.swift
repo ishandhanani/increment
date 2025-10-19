@@ -297,7 +297,15 @@ public class SessionManager {
             return
         }
 
+        print("🎯 ========================================")
         print("🎯 Next workout: \(nextWorkout.name)")
+        print("🎯 Workout type: \(nextWorkout.workoutType)")
+        print("🎯 Number of exercises: \(nextWorkout.exercises.count)")
+        for (idx, ex) in nextWorkout.exercises.enumerated() {
+            print("🎯   Exercise \(idx + 1): \(ex.lift.name) (\(ex.priority))")
+        }
+        print("🎯 ========================================")
+
         currentWorkoutTemplate = nextWorkout
 
         // Create a temporary session (will be properly initialized after template conversion)
