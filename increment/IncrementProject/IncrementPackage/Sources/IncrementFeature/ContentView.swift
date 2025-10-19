@@ -5,13 +5,14 @@ public struct ContentView: View {
     @Environment(SessionManager.self) private var sessionManager
     @State private var showingAnalytics = false
     @State private var showingSettings = false
+    @State private var showingCalibration = false
 
     public init() {}
 
     public var body: some View {
         ZStack {
             // Terminal-style background
-            Color(red: 0.1, green: 0.15, blue: 0.3)
+            IncrementTheme.backgroundGradient
                 .ignoresSafeArea()
 
             if showingSettings {
@@ -50,6 +51,20 @@ public struct ContentView: View {
             }
         }
         .font(.system(.body, design: .monospaced))
+        .fullScreenCover(isPresented: $showingCalibration) {
+            CalibrationView(isPresented: $showingCalibration)
+                .environment(sessionManager)
+        }
+        .onAppear {
+            checkCalibrationStatus()
+        }
+    }
+
+    private func checkCalibrationStatus() {
+        // Only show calibration on first launch (intro screen + no calibration done)
+        if sessionManager.sessionState == .intro && !PersistenceManager.shared.hasCompletedCalibration() {
+            showingCalibration = true
+        }
     }
 }
 

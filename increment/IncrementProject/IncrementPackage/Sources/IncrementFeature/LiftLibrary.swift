@@ -282,4 +282,9 @@ struct LiftLibrary {
         run,
         row
     ]
+
+    // MARK: - All Lifts
+
+    /// All lifts across all categories
+    static let allLifts: [Lift] = pushLifts + pullLifts + legLifts + cardioLifts
 }

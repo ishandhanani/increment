@@ -50,7 +50,7 @@ struct ActionBar<Label: View>: View {
                 .frame(maxWidth: .infinity)
                 .padding(16)
                 .background(Color.white)
-                .foregroundColor(Color(red: 0.1, green: 0.15, blue: 0.3))
+                .foregroundColor(.black)
                 .cornerRadius(8)
         }
         .buttonStyle(.plain)

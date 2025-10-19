@@ -5,6 +5,8 @@ import SwiftUI
 @MainActor
 public struct SettingsView: View {
     @Binding var isPresented: Bool
+    @State private var showingDiagnostic = false
+    @State private var showingCalibration = false
 
     public init(isPresented: Binding<Bool>) {
         self._isPresented = isPresented
@@ -40,6 +42,26 @@ public struct SettingsView: View {
             // Settings Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    // Training Section
+                    SettingsSection(title: "TRAINING") {
+                        SettingButton(
+                            title: "Run Diagnostic",
+                            description: "View monthly progress metrics"
+                        ) {
+                            showingDiagnostic = true
+                        }
+
+                        Divider()
+                            .background(Color.white.opacity(0.1))
+
+                        SettingButton(
+                            title: "Recalibrate Weights",
+                            description: "Update starting weights from 1RM"
+                        ) {
+                            showingCalibration = true
+                        }
+                    }
+
                     // About Section
                     SettingsSection(title: "ABOUT") {
                         SettingRow(
@@ -55,6 +77,12 @@ public struct SettingsView: View {
                 }
                 .padding(24)
             }
+        }
+        .fullScreenCover(isPresented: $showingDiagnostic) {
+            DiagnosticView(isPresented: $showingDiagnostic)
+        }
+        .fullScreenCover(isPresented: $showingCalibration) {
+            CalibrationView(isPresented: $showingCalibration)
         }
     }
 }
@@ -115,6 +143,38 @@ struct SettingToggle: View {
             }
             .padding(20)
         }
+    }
+}
+
+// MARK: - Setting Button
+
+struct SettingButton: View {
+    let title: String
+    let description: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundColor(.white)
+
+                    Text(description)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+
+                Spacer()
+
+                Text("→")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+            .padding(20)
+        }
+        .buttonStyle(.plain)
     }
 }
 
