@@ -339,7 +339,9 @@ public class SessionManager {
         currentSession?.preWorkoutFeeling = feeling
 
         persistCurrentState()
-        sessionState = .workoutOverview
+
+        // Skip workout overview and go straight to starting the workout
+        startWorkoutFromTemplate()
     }
 
     // MARK: - Workout Overview
