@@ -52,8 +52,6 @@ public class SessionManager {
     // MARK: - Initialization
 
     public init() {
-        loadDefaultExercises()
-        loadDefaultWorkoutPlan()
         loadDefaultWorkoutCycle()
         loadPersistedState()
     }
@@ -793,16 +791,6 @@ public class SessionManager {
     }
 
     // MARK: - Default Data
-
-    private func loadDefaultExercises() {
-        // Deprecated: Now using workout templates instead
-        AppLogger.session.debug("Skipping legacy exercise loading")
-    }
-
-    private func loadDefaultWorkoutPlan() {
-        // Deprecated: Now using workout templates instead
-        AppLogger.session.debug("Skipping legacy workout plan loading")
-    }
 
     private func loadDefaultWorkoutCycle() {
         AppLogger.session.debug("Initializing workout cycle with dynamic generation")

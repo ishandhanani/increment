@@ -37,9 +37,7 @@ struct IntroView: View {
 
             // Action Bar
             ActionBar {
-                if let firstPlan = sessionManager.workoutPlans.first {
-                    sessionManager.startSession(workoutPlanId: firstPlan.id)
-                }
+                sessionManager.startSession()
             } label: {
                 Text("START SESSION")
             }

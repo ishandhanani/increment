@@ -25,11 +25,10 @@ struct SessionManagerTests {
         await PersistenceManager.shared.clearAll()
 
         let manager = await SessionManager()
-        let planId = await MainActor.run { manager.workoutPlans.first!.id }
 
-        // Act - Start session
+        // Act - Start session (new flow - no workoutPlanId needed)
         await MainActor.run {
-            manager.startSession(workoutPlanId: planId)
+            manager.startSession()
         }
 
         // Assert - Should be at pre-workout screen
@@ -41,6 +40,17 @@ struct SessionManagerTests {
         // Act - Log pre-workout feeling
         await MainActor.run {
             manager.logPreWorkoutFeeling(PreWorkoutFeeling(rating: 4, note: "Ready"))
+        }
+
+        // Assert - Should show workout overview (new flow)
+        await MainActor.run {
+            #expect(manager.sessionState == .workoutOverview)
+            #expect(manager.currentWorkoutTemplate != nil)
+        }
+
+        // Act - Start workout from template
+        await MainActor.run {
+            manager.startWorkoutFromTemplate()
         }
 
         // Assert - Should start stretching
@@ -98,12 +108,12 @@ struct SessionManagerTests {
         // Arrange
         await PersistenceManager.shared.clearAll()
         let manager = await SessionManager()
-        let planId = await MainActor.run { manager.workoutPlans.first!.id }
 
         // Act - Start and setup
         await MainActor.run {
-            manager.startSession(workoutPlanId: planId)
+            manager.startSession()
             manager.logPreWorkoutFeeling(PreWorkoutFeeling(rating: 4))
+            manager.startWorkoutFromTemplate()
             manager.skipStretching()
         }
 
