@@ -23,105 +23,110 @@ struct WorkoutLiveActivity: Widget {
             DynamicIsland {
                 // Expanded region (when tapped)
                 DynamicIslandExpandedRegion(.leading) {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(context.state.currentExercise)
-                            .font(.system(.body, design: .rounded))
+                            .font(.system(.body, design: .monospaced))
                             .fontWeight(.semibold)
-                            .lineLimit(1)
-                        Text("Set \(context.state.currentSet)/\(context.state.totalSets)")
-                            .font(.system(.caption, design: .rounded))
+                            .lineLimit(2)
+                        Text("Set: \(context.state.currentSet)/\(context.state.totalSets)")
+                            .font(.system(.caption2, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
                 }
 
                 DynamicIslandExpandedRegion(.trailing) {
                     if let restTime = context.state.restTimeRemaining, context.state.isResting {
-                        VStack(alignment: .trailing, spacing: 2) {
+                        VStack(alignment: .trailing, spacing: 4) {
                             Text(formatTime(restTime))
-                                .font(.system(.title2, design: .monospaced))
+                                .font(.system(.title3, design: .monospaced))
                                 .fontWeight(.bold)
                                 .foregroundStyle(.orange)
                                 .monospacedDigit()
-                            Text("Rest")
-                                .font(.system(.caption, design: .rounded))
+                            Text("REST")
+                                .font(.system(.caption2, design: .monospaced))
                                 .foregroundStyle(.secondary)
                         }
                     } else {
-                        Image(systemName: "figure.strengthtraining.traditional")
-                            .font(.title2)
-                            .foregroundStyle(.blue)
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text("ACTIVE")
+                                .font(.system(.caption, design: .monospaced))
+                                .fontWeight(.bold)
+                                .foregroundStyle(.blue)
+                            Text("\(context.state.exercisesCompleted)/\(context.state.totalExercises)")
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
 
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack {
                         // Next prescription
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Next Set")
-                                .font(.system(.caption, design: .rounded))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("NEXT")
+                                .font(.system(.caption2, design: .monospaced))
                                 .foregroundStyle(.secondary)
-                            HStack(spacing: 4) {
+                            HStack(spacing: 2) {
                                 Text("\(context.state.nextReps)")
-                                    .font(.system(.body, design: .monospaced))
-                                    .fontWeight(.semibold)
+                                    .font(.system(.subheadline, design: .monospaced))
+                                    .fontWeight(.bold)
                                 Text("×")
+                                    .font(.system(.caption, design: .monospaced))
                                     .foregroundStyle(.secondary)
                                 Text("\(Int(context.state.nextWeight))")
-                                    .font(.system(.body, design: .monospaced))
-                                    .fontWeight(.semibold)
+                                    .font(.system(.subheadline, design: .monospaced))
+                                    .fontWeight(.bold)
                                 Text("lb")
-                                    .font(.system(.caption, design: .rounded))
+                                    .font(.system(.caption2, design: .monospaced))
                                     .foregroundStyle(.secondary)
                             }
                         }
 
                         Spacer()
 
-                        // Progress indicator
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("Progress")
-                                .font(.system(.caption, design: .rounded))
+                        // Workout progress
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("EXERCISES")
+                                .font(.system(.caption2, design: .monospaced))
                                 .foregroundStyle(.secondary)
                             Text("\(context.state.exercisesCompleted)/\(context.state.totalExercises)")
-                                .font(.system(.body, design: .monospaced))
-                                .fontWeight(.semibold)
+                                .font(.system(.subheadline, design: .monospaced))
+                                .fontWeight(.bold)
                         }
                     }
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 12)
                 }
             } compactLeading: {
                 // Compact leading (small pill left side)
-                HStack(spacing: 4) {
-                    Image(systemName: "figure.strengthtraining.traditional")
-                        .font(.caption)
+                HStack(spacing: 2) {
+                    Text("•")
+                        .font(.system(.caption2, design: .monospaced))
+                        .fontWeight(.bold)
                     Text("INC")
-                        .font(.system(.caption2, design: .rounded))
+                        .font(.system(.caption2, design: .monospaced))
                         .fontWeight(.bold)
                 }
-                .foregroundStyle(.blue)
+                .foregroundStyle(.white)
             } compactTrailing: {
                 // Compact trailing (small pill right side)
                 if let restTime = context.state.restTimeRemaining, context.state.isResting {
                     Text(formatTime(restTime))
                         .font(.system(.caption, design: .monospaced))
-                        .fontWeight(.semibold)
+                        .fontWeight(.bold)
                         .foregroundStyle(.orange)
                         .monospacedDigit()
                 } else {
                     Text("\(context.state.currentSet)/\(context.state.totalSets)")
                         .font(.system(.caption, design: .monospaced))
-                        .fontWeight(.semibold)
+                        .fontWeight(.bold)
                         .monospacedDigit()
                 }
             } minimal: {
                 // Minimal view (when multiple activities)
-                if context.state.isResting {
-                    Image(systemName: "timer")
-                        .foregroundStyle(.orange)
-                } else {
-                    Image(systemName: "figure.strengthtraining.traditional")
-                        .foregroundStyle(.blue)
-                }
+                Text("•")
+                    .font(.system(.caption2, design: .monospaced))
+                    .fontWeight(.bold)
+                    .foregroundStyle(context.state.isResting ? .orange : .white)
             }
         }
     }
@@ -131,37 +136,28 @@ struct WorkoutLockScreenView: View {
     let context: ActivityViewContext<WorkoutLiveActivityAttributes>
 
     var body: some View {
-        VStack(spacing: 8) {
-            // Header
-            HStack {
-                Image(systemName: "figure.strengthtraining.traditional")
-                    .font(.headline)
-                    .foregroundStyle(.blue)
-                Text(context.attributes.workoutName)
-                    .font(.system(.headline, design: .rounded))
-                    .fontWeight(.semibold)
-                Spacer()
-                Text("\(context.state.exercisesCompleted)/\(context.state.totalExercises)")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-
-            // Current exercise and set
-            HStack {
+        VStack(spacing: 10) {
+            // Header - exercise name and progress
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(context.state.currentExercise)
-                        .font(.system(.body, design: .rounded))
-                        .fontWeight(.medium)
-                        .lineLimit(1)
-                    Text("Set \(context.state.currentSet) of \(context.state.totalSets)")
-                        .font(.system(.caption, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .font(.system(.subheadline, design: .monospaced))
+                        .fontWeight(.bold)
+                        .lineLimit(2)
+                    HStack(spacing: 4) {
+                        Text("Set:")
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                        Text("\(context.state.currentSet)/\(context.state.totalSets)")
+                            .font(.system(.caption, design: .monospaced))
+                            .fontWeight(.semibold)
+                            .monospacedDigit()
+                    }
                 }
 
                 Spacer()
 
-                // Rest timer or ready state
+                // Status indicator
                 if let restTime = context.state.restTimeRemaining, context.state.isResting {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(formatTime(restTime))
@@ -169,36 +165,51 @@ struct WorkoutLockScreenView: View {
                             .fontWeight(.bold)
                             .foregroundStyle(.orange)
                             .monospacedDigit()
-                        Text("Rest")
-                            .font(.system(.caption, design: .rounded))
+                        Text("REST")
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("ACTIVE")
+                            .font(.system(.caption, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundStyle(.blue)
+                        Text("\(context.state.exercisesCompleted)/\(context.state.totalExercises)")
+                            .font(.system(.caption2, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
                 }
             }
 
-            // Next prescription
-            HStack {
-                Text("Next:")
-                    .font(.system(.caption, design: .rounded))
+            // Divider
+            Rectangle()
+                .fill(Color.primary.opacity(0.15))
+                .frame(height: 1)
+
+            // Next prescription - always visible
+            HStack(spacing: 6) {
+                Text("NEXT:")
+                    .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(.secondary)
-                HStack(spacing: 4) {
+                HStack(spacing: 3) {
                     Text("\(context.state.nextReps)")
-                        .font(.system(.body, design: .monospaced))
-                        .fontWeight(.semibold)
-                    Text("reps ×")
-                        .font(.system(.caption, design: .rounded))
+                        .font(.system(.subheadline, design: .monospaced))
+                        .fontWeight(.bold)
+                    Text("×")
+                        .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.secondary)
                     Text("\(Int(context.state.nextWeight))")
-                        .font(.system(.body, design: .monospaced))
-                        .fontWeight(.semibold)
+                        .font(.system(.subheadline, design: .monospaced))
+                        .fontWeight(.bold)
                     Text("lb")
-                        .font(.system(.caption, design: .rounded))
+                        .font(.system(.caption2, design: .monospaced))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
             }
         }
-        .padding(12)
-        .activityBackgroundTint(Color.blue.opacity(0.1))
+        .padding(14)
+        .activityBackgroundTint(Color(red: 0.1, green: 0.15, blue: 0.3).opacity(0.8))
     }
 }

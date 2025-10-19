@@ -41,7 +41,6 @@ public class SessionManager {
         case workoutOverview  // NEW: Shows workout summary before stretching
         case stretching(timeRemaining: Int)  // 5-minute stretching countdown
         case warmup(step: Int)  // 0 = 50%×5, 1 = 70%×3
-        case load
         case workingSet
         case rest(timeRemaining: Int)
         case review
@@ -213,8 +212,6 @@ public class SessionManager {
             return "stretching:\(timeRemaining)"
         case .warmup(let step):
             return "warmup:\(step)"
-        case .load:
-            return "load"
         case .workingSet:
             return "workingSet"
         case .rest(let timeRemaining):
@@ -247,8 +244,6 @@ public class SessionManager {
                 return .warmup(step: step)
             }
             return .warmup(step: 0)
-        case "load":
-            return .load
         case "workingSet":
             return .workingSet
         case "rest":
@@ -391,8 +386,8 @@ public class SessionManager {
             sessionState = .warmup(step: 0)
             isFirstExercise = false
         } else {
-            // Skip warmups, go directly to load
-            sessionState = .load
+            // Skip warmups, go directly to working set
+            sessionState = .workingSet
             computeInitialPrescription()
         }
 
@@ -421,8 +416,8 @@ public class SessionManager {
             // Move to 70%×3
             sessionState = .warmup(step: 1)
         } else {
-            // Warmup complete, move to load
-            sessionState = .load
+            // Warmup complete, move to working set
+            sessionState = .workingSet
             computeInitialPrescription()
         }
     }
@@ -441,12 +436,6 @@ public class SessionManager {
         default:
             return nil
         }
-    }
-
-    // MARK: - Load Flow
-
-    public func acknowledgeLoad() {
-        sessionState = .workingSet
     }
 
     // MARK: - Working Set Flow
