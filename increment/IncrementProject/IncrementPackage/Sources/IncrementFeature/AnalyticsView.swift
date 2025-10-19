@@ -123,6 +123,10 @@ struct OverviewDashboardView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(24)
         }
+        .task {
+            // Refresh analytics data when view appears
+            await sessionManager.refreshSessions()
+        }
     }
 }
 

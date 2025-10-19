@@ -4,6 +4,75 @@ import Foundation
 /// Set-to-set Tuning + End-of-exercise Escalation/Lowering
 public class SteelProgressionEngine {
 
+    // MARK: - Warmup Prescription
+
+    /// Result of warmup calculation
+    public struct WarmupPrescription {
+        public let sets: [WarmupSet]
+        public let needsWarmup: Bool
+
+        public struct WarmupSet {
+            public let weight: Double
+            public let reps: Int
+            public let stepNumber: Int  // 0-indexed
+        }
+    }
+
+    /// Determines if an exercise needs warmup and generates warmup sets
+    /// - Parameters:
+    ///   - equipment: Type of equipment used
+    ///   - workingWeight: Starting weight for working sets
+    ///   - category: Exercise category (cardio, etc.)
+    /// - Returns: Warmup prescription with sets or indication that no warmup needed
+    public static func prescribeWarmup(
+        equipment: Equipment,
+        workingWeight: Double,
+        category: LiftCategory
+    ) -> WarmupPrescription {
+        // Skip warmups for cardio
+        if equipment == .cardioMachine || category == .cardio {
+            return WarmupPrescription(sets: [], needsWarmup: false)
+        }
+
+        // Skip warmups for bodyweight exercises
+        if equipment == .bodyweight {
+            return WarmupPrescription(sets: [], needsWarmup: false)
+        }
+
+        // Generate warmup sets based on equipment and weight
+        var sets: [WarmupPrescription.WarmupSet] = []
+
+        // Heavy barbell (>225 lbs): 3 warmup sets
+        if equipment == .barbell && workingWeight > 225 {
+            sets = [
+                WarmupPrescription.WarmupSet(weight: workingWeight * 0.4, reps: 5, stepNumber: 0),
+                WarmupPrescription.WarmupSet(weight: workingWeight * 0.6, reps: 4, stepNumber: 1),
+                WarmupPrescription.WarmupSet(weight: workingWeight * 0.8, reps: 2, stepNumber: 2)
+            ]
+        }
+        // Dumbbell/Machine: 1 lighter warmup
+        else if equipment == .dumbbell || equipment == .machine {
+            sets = [
+                WarmupPrescription.WarmupSet(weight: workingWeight * 0.7, reps: 5, stepNumber: 0)
+            ]
+        }
+        // Standard barbell: 2 warmup sets
+        else if equipment == .barbell {
+            sets = [
+                WarmupPrescription.WarmupSet(weight: workingWeight * 0.5, reps: 5, stepNumber: 0),
+                WarmupPrescription.WarmupSet(weight: workingWeight * 0.7, reps: 3, stepNumber: 1)
+            ]
+        }
+        // Cable: 1 moderate warmup
+        else if equipment == .cable {
+            sets = [
+                WarmupPrescription.WarmupSet(weight: workingWeight * 0.6, reps: 5, stepNumber: 0)
+            ]
+        }
+
+        return WarmupPrescription(sets: sets, needsWarmup: !sets.isEmpty)
+    }
+
     // MARK: - Within-Session Micro-Adjust (4B)
 
     public struct MicroAdjustResult {

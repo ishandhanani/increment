@@ -6,14 +6,52 @@ extension SessionManager {
 
     // MARK: - Historical Sessions
 
-    /// All completed workout sessions (returns empty initially, call refreshSessions() to load)
+    /// Cached sessions for analytics (private storage)
+    private static var cachedSessions: [Session]?
+    private static var lastCacheRefresh: Date?
+    private static let cacheValidityDuration: TimeInterval = 60  // 1 minute
+
+    /// All completed workout sessions (loaded from database with caching)
     public var allSessions: [Session] {
-        return []  // Temporary: Analytics will be fixed in a future update
+        // Return cached sessions if valid
+        if let cached = SessionManager.cachedSessions,
+           let lastRefresh = SessionManager.lastCacheRefresh,
+           Date().timeIntervalSince(lastRefresh) < SessionManager.cacheValidityDuration {
+            return cached.filter { !$0.isActive }  // Only completed sessions
+        }
+
+        // Otherwise load synchronously from database
+        do {
+            let sessions = try DatabaseManager.shared.loadSessionsSync()
+            SessionManager.cachedSessions = sessions
+            SessionManager.lastCacheRefresh = Date()
+            AppLogger.analytics.debug("Loaded \(sessions.count) sessions from database for analytics")
+            return sessions.filter { !$0.isActive }  // Only completed sessions
+        } catch {
+            AppLogger.analytics.error("Failed to load sessions for analytics: \(error.localizedDescription)")
+            return []
+        }
     }
 
-    /// Refresh sessions from database
+    /// Refresh sessions from database (invalidates cache)
     public func refreshSessions() async {
-        // TODO: Implement session caching
+        do {
+            let sessions = try await DatabaseManager.shared.loadSessions()
+            await MainActor.run {
+                SessionManager.cachedSessions = sessions
+                SessionManager.lastCacheRefresh = Date()
+            }
+            AppLogger.analytics.debug("Refreshed \(sessions.count) sessions for analytics")
+        } catch {
+            AppLogger.analytics.error("Failed to refresh sessions: \(error.localizedDescription)")
+        }
+    }
+
+    /// Force invalidate the cache (useful after completing a workout)
+    public func invalidateAnalyticsCache() {
+        SessionManager.cachedSessions = nil
+        SessionManager.lastCacheRefresh = nil
+        AppLogger.analytics.debug("Analytics cache invalidated")
     }
 
     // MARK: - Overview Statistics
@@ -55,9 +93,12 @@ extension SessionManager {
 
     /// Volume breakdown by exercise category
     public var volumeByCategory: [VolumeByCategory] {
+        // Build profiles dictionary from performed exercises
+        let profilesDict = Dictionary(uniqueKeysWithValues: exercisesPerformed.map { ($0.id, $0) })
+
         return AnalyticsEngine.calculateVolumeByCategory(
             sessions: allSessions,
-            profiles: exerciseProfiles
+            profiles: profilesDict
         )
     }
 
@@ -84,7 +125,8 @@ extension SessionManager {
     /// - Parameter exerciseId: Name of the exercise
     /// - Returns: Exercise summary with stats
     public func exerciseSummary(for exerciseId: String) -> ExerciseSummary? {
-        guard let profile = exerciseProfiles[exerciseId] else { return nil }
+        // Get profile from performed exercises since exerciseProfiles is empty outside active workouts
+        guard let profile = exercisesPerformed.first(where: { $0.id == exerciseId }) else { return nil }
 
         let exerciseSessions = allSessions.filter { session in
             session.exerciseLogs.contains { $0.exerciseId == exerciseId }
@@ -138,13 +180,28 @@ extension SessionManager {
 
     /// List of all exercises that have been performed
     public var exercisesPerformed: [ExerciseProfile] {
+        // Get unique exercise IDs from all sessions
         let performedIds = Set(allSessions.flatMap { session in
             session.exerciseLogs.map { $0.exerciseId }
         })
 
-        return performedIds.compactMap { exerciseId in
-            exerciseProfiles[exerciseId]
+        // Build exercise profiles from workout templates in sessions
+        // We need to reconstruct profiles since exerciseProfiles dictionary
+        // is only populated during active workouts
+        var profiles: [String: ExerciseProfile] = [:]
+
+        for session in allSessions {
+            if let template = session.workoutTemplate {
+                let sessionProfiles = WorkoutTemplateConverter.toExerciseProfiles(from: template)
+                profiles.merge(sessionProfiles) { existing, _ in existing }
+            }
         }
+
+        // Return profiles for exercises that were actually performed
+        return performedIds.compactMap { exerciseId in
+            profiles[exerciseId]
+        }
+        .sorted { $0.name < $1.name }  // Sort alphabetically
     }
 
     // MARK: - Performance Insights
@@ -170,9 +227,10 @@ extension SessionManager {
         }
 
         // Consistency insight
+        let profilesDict = Dictionary(uniqueKeysWithValues: exercisesPerformed.map { ($0.id, $0) })
         if let consistencyInsight = AnalyticsEngine.identifyMostConsistentExercise(
             sessions: allSessions,
-            profiles: exerciseProfiles
+            profiles: profilesDict
         ) {
             insights.append(consistencyInsight)
         }
