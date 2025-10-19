@@ -9,8 +9,8 @@ public struct CalibrationEngine {
     public static func calibrate(from input: CalibrationInput) -> CalibrationResult {
         var exerciseStates: [String: ExerciseState] = [:]
 
-        // Get all lifts from library
-        let allLifts = LiftLibrary.allLifts
+        // Get all lifts from library (built-in only for calibration)
+        let allLifts = LiftLibrary.allBuiltInLifts
 
         for lift in allLifts {
             let startWeight = computeStartingWeight(

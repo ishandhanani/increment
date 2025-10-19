@@ -162,3 +162,85 @@ struct ExerciseStateRecord: Codable, FetchableRecord, PersistableRecord {
         )
     }
 }
+
+// MARK: - CustomLiftRecord
+
+struct CustomLiftRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "custom_lifts"
+
+    var id: String
+    var lift: Data
+    var createdAt: Double
+
+    init(id: UUID, lift: Lift, createdAt: Date) {
+        self.id = id.uuidString
+        self.createdAt = createdAt.timeIntervalSince1970
+
+        let encoder = JSONEncoder()
+        self.lift = (try? encoder.encode(lift)) ?? Data()
+    }
+
+    func toModel() -> (id: UUID, lift: Lift, createdAt: Date)? {
+        let decoder = JSONDecoder()
+        guard let lift = try? decoder.decode(Lift.self, from: lift),
+              let uuid = UUID(uuidString: id) else {
+            return nil
+        }
+        return (uuid, lift, Date(timeIntervalSince1970: createdAt))
+    }
+}
+
+// MARK: - CustomTemplateRecord
+
+struct CustomTemplateRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "custom_templates"
+
+    var id: String
+    var template: Data
+    var createdAt: Double
+
+    init(id: UUID, template: WorkoutTemplate, createdAt: Date) {
+        self.id = id.uuidString
+        self.createdAt = createdAt.timeIntervalSince1970
+
+        let encoder = JSONEncoder()
+        self.template = (try? encoder.encode(template)) ?? Data()
+    }
+
+    func toModel() -> (id: UUID, template: WorkoutTemplate, createdAt: Date)? {
+        let decoder = JSONDecoder()
+        guard let template = try? decoder.decode(WorkoutTemplate.self, from: template),
+              let uuid = UUID(uuidString: id) else {
+            return nil
+        }
+        return (uuid, template, Date(timeIntervalSince1970: createdAt))
+    }
+}
+
+// MARK: - WorkoutRotationRecord
+
+struct WorkoutRotationRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "workout_rotation"
+
+    var id: String
+    var templateIds: Data
+    var updatedAt: Double
+
+    init(templateIds: [UUID], updatedAt: Date) {
+        self.id = "singleton" // Only one rotation config
+        self.updatedAt = updatedAt.timeIntervalSince1970
+
+        let encoder = JSONEncoder()
+        let uuidStrings = templateIds.map { $0.uuidString }
+        self.templateIds = (try? encoder.encode(uuidStrings)) ?? Data()
+    }
+
+    func toModel() -> (templateIds: [UUID], updatedAt: Date)? {
+        let decoder = JSONDecoder()
+        guard let uuidStrings = try? decoder.decode([String].self, from: templateIds) else {
+            return nil
+        }
+        let uuids = uuidStrings.compactMap { UUID(uuidString: $0) }
+        return (uuids, Date(timeIntervalSince1970: updatedAt))
+    }
+}

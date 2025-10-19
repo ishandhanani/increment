@@ -27,6 +27,8 @@ public class SessionManager {
     public var workoutCycle: WorkoutCycle?
     public var currentWorkoutTemplate: WorkoutTemplate?
     public var suggestedWorkoutType: LiftCategory = .push  // For workout selection screen
+    public var workoutRotation: [UUID] = []  // Ordered list of template IDs for rotation
+    public var customTemplates: [WorkoutTemplate] = []  // User-created templates
 
     // Timer management
     private var restTimer: RestTimer?
@@ -57,12 +59,40 @@ public class SessionManager {
         // Start loading persisted state asynchronously
         Task {
             await loadPersistedState()
+            await loadWorkoutRotation()
         }
     }
 
     /// Initialize and wait for persisted state to load
     public func initialize() async {
         await loadPersistedState()
+        await loadWorkoutRotation()
+    }
+
+    /// Load custom workout rotation from database
+    private func loadWorkoutRotation() async {
+        do {
+            // Load custom templates
+            customTemplates = try await DatabaseManager.shared.loadCustomTemplates()
+            AppLogger.session.info("Loaded \(self.customTemplates.count) custom templates")
+
+            // Load rotation order
+            if let savedRotation = try await DatabaseManager.shared.loadWorkoutRotation(), !savedRotation.isEmpty {
+                workoutRotation = savedRotation
+                AppLogger.session.info("Loaded workout rotation with \(savedRotation.count) templates")
+            } else {
+                // Default to built-in rotation
+                workoutRotation = [
+                    WorkoutBuilder.build(type: .push).id,
+                    WorkoutBuilder.build(type: .pull).id,
+                    WorkoutBuilder.build(type: .legs).id,
+                    WorkoutBuilder.build(type: .cardio).id
+                ]
+                AppLogger.session.info("Using default built-in rotation")
+            }
+        } catch {
+            AppLogger.session.error("Failed to load workout rotation: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Resume State
@@ -290,29 +320,82 @@ public class SessionManager {
     public func showWorkoutSelection() {
         AppLogger.session.notice("Showing workout selection")
 
-        // Query last workout from DB
-        let sessions = PersistenceManager.shared.loadSessionsSync()
-        let lastType = sessions.first?.workoutTemplate?.workoutType
-        let nextType = lastType?.next ?? .push
+        // Determine next workout from rotation
+        let nextTemplate = getNextWorkoutFromRotation()
+        currentWorkoutTemplate = nextTemplate
 
-        suggestedWorkoutType = nextType
+        // Set suggested type for display (used by WorkoutSelectionView)
+        suggestedWorkoutType = nextTemplate?.workoutType ?? .push
         sessionState = .workoutSelection
 
-        AppLogger.session.info("Suggested workout type: \(nextType.rawValue, privacy: .public)")
+        AppLogger.session.info("Suggested workout: \(nextTemplate?.name ?? "unknown", privacy: .public)")
+    }
+
+    /// Get next workout from rotation based on last completed workout
+    private func getNextWorkoutFromRotation() -> WorkoutTemplate? {
+        guard !workoutRotation.isEmpty else {
+            // Fallback to default rotation if no rotation configured
+            return WorkoutBuilder.build(type: .push)
+        }
+
+        // Get last completed workout template ID
+        let sessions = PersistenceManager.shared.loadSessionsSync()
+        let lastTemplateId = sessions.first?.workoutTemplate?.id
+
+        // Find index in rotation
+        if let lastId = lastTemplateId,
+           let lastIndex = workoutRotation.firstIndex(of: lastId) {
+            // Get next in rotation (wrapping around)
+            let nextIndex = (lastIndex + 1) % workoutRotation.count
+            let nextId = workoutRotation[nextIndex]
+
+            // Find template (check both custom and built-in)
+            if let customTemplate = customTemplates.first(where: { $0.id == nextId }) {
+                return customTemplate
+            } else {
+                // Generate built-in template on demand
+                return generateBuiltInTemplate(id: nextId)
+            }
+        } else {
+            // No previous workout or not in rotation - use first template
+            let firstId = workoutRotation[0]
+            if let customTemplate = customTemplates.first(where: { $0.id == firstId }) {
+                return customTemplate
+            } else {
+                return generateBuiltInTemplate(id: firstId)
+            }
+        }
+    }
+
+    /// Generate a built-in template by ID (since they're generated on demand)
+    private func generateBuiltInTemplate(id: UUID) -> WorkoutTemplate? {
+        // Check if ID matches any built-in template ID
+        let builtInTemplates = [
+            WorkoutBuilder.build(type: .push),
+            WorkoutBuilder.build(type: .pull),
+            WorkoutBuilder.build(type: .legs),
+            WorkoutBuilder.build(type: .cardio)
+        ]
+
+        return builtInTemplates.first { $0.id == id }
     }
 
     /// Step 2: User confirmed - create session and persist immediately
     public func confirmWorkoutStart() {
-        AppLogger.session.notice("Confirmed workout start: \(self.suggestedWorkoutType.rawValue, privacy: .public)")
+        guard let template = currentWorkoutTemplate else {
+            AppLogger.session.error("No template selected for workout start")
+            return
+        }
+
+        AppLogger.session.notice("Confirmed workout start: \(template.name, privacy: .public)")
 
         // Reset session state
         currentExerciseIndex = 0
         currentSetIndex = 0
         isFirstExercise = true
 
-        // Generate template
-        currentWorkoutTemplate = WorkoutBuilder.build(type: suggestedWorkoutType)
-        AppLogger.session.info("Generated template: \(self.currentWorkoutTemplate?.name ?? "unknown", privacy: .public)")
+        // Template already set by showWorkoutSelection
+        AppLogger.session.info("Using template: \(template.name, privacy: .public)")
 
         // Create new session
         currentSession = Session(

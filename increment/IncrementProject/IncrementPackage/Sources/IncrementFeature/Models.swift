@@ -32,7 +32,7 @@ public enum LiftCategory: String, Codable, Sendable, CaseIterable {
     }
 }
 
-public enum Equipment: String, Codable, Sendable {
+public enum Equipment: String, Codable, Sendable, CaseIterable {
     case barbell
     case dumbbell
     case cable
@@ -41,7 +41,7 @@ public enum Equipment: String, Codable, Sendable {
     case cardioMachine
 }
 
-public enum MuscleGroup: String, Codable, Sendable {
+public enum MuscleGroup: String, Codable, Sendable, CaseIterable {
     // Push
     case chest
     case shoulders
@@ -343,7 +343,8 @@ public struct Lift: Codable, Hashable, Sendable {
 }
 
 /// Configuration for an exercise within a workout template
-public struct WorkoutExercise: Codable, Sendable {
+public struct WorkoutExercise: Codable, Sendable, Identifiable {
+    public let id: UUID
     public let lift: Lift                // The actual lift with STEEL config
     public let order: Int                // Exercise order in workout
     public let priority: LiftPriority    // Core or Accessory
@@ -351,7 +352,13 @@ public struct WorkoutExercise: Codable, Sendable {
     public let restTime: TimeInterval    // Rest between sets in seconds
     public let notes: String?            // Optional notes
 
+    // Convenience properties for custom workout builder
+    public var sets: Int { targetSets }
+    public var reps: Int { lift.steelConfig.repRange.upperBound }
+    public var restSeconds: Int { Int(restTime) }
+
     public init(
+        id: UUID = UUID(),
         lift: Lift,
         order: Int,
         priority: LiftPriority,
@@ -359,12 +366,32 @@ public struct WorkoutExercise: Codable, Sendable {
         restTime: TimeInterval,
         notes: String? = nil
     ) {
+        self.id = id
         self.lift = lift
         self.order = order
         self.priority = priority
         self.targetSets = targetSets
         self.restTime = restTime
         self.notes = notes
+    }
+
+    // Convenience initializer for custom workout builder
+    public init(
+        id: UUID = UUID(),
+        lift: Lift,
+        order: Int,
+        priority: LiftPriority,
+        sets: Int,
+        reps: Int,
+        restSeconds: Int
+    ) {
+        self.id = id
+        self.lift = lift
+        self.order = order
+        self.priority = priority
+        self.targetSets = sets
+        self.restTime = TimeInterval(restSeconds)
+        self.notes = nil
     }
 }
 

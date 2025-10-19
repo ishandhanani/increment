@@ -152,7 +152,7 @@ public struct DiagnosticEngine {
                 let weeksStalled = max(1, daysBetween / 7)
 
                 // Get exercise name from LiftLibrary
-                let exerciseName = LiftLibrary.allLifts.first(where: { $0.id == exerciseId })?.name ?? exerciseId
+                let exerciseName = LiftLibrary.allBuiltInLifts.first(where: { $0.id == exerciseId })?.name ?? exerciseId
 
                 stalledLifts.append(StalledLift(
                     exerciseId: exerciseId,

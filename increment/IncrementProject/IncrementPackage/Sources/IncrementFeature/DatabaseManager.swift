@@ -47,12 +47,12 @@ class DatabaseManager: @unchecked Sendable {
         }
     }
 
-    // MARK: - Migrations
+    // MARK: - Schema
 
     private var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
 
-        migrator.registerMigration("v1_initial_schema") { db in
+        migrator.registerMigration("schema") { db in
             // Sessions table
             try db.create(table: "sessions") { t in
                 t.primaryKey("id", .text)
@@ -103,12 +103,35 @@ class DatabaseManager: @unchecked Sendable {
                 t.column("lastUpdatedAt", .double).notNull()
             }
 
+            // Custom lifts table
+            try db.create(table: "custom_lifts") { t in
+                t.primaryKey("id", .text)
+                t.column("lift", .blob).notNull()
+                t.column("createdAt", .double).notNull()
+            }
+
+            // Custom workout templates table
+            try db.create(table: "custom_templates") { t in
+                t.primaryKey("id", .text)
+                t.column("template", .blob).notNull()
+                t.column("createdAt", .double).notNull()
+            }
+
+            // Workout rotation table (stores ordered list of template IDs)
+            try db.create(table: "workout_rotation") { t in
+                t.primaryKey("id", .text)
+                t.column("templateIds", .blob).notNull() // JSON array of UUIDs
+                t.column("updatedAt", .double).notNull()
+            }
+
             // Indexes for performance
             try db.create(index: "idx_sessions_date", on: "sessions", columns: ["date"])
             try db.create(index: "idx_sessions_active", on: "sessions", columns: ["isActive"])
             try db.create(index: "idx_exercise_logs_session", on: "exercise_logs", columns: ["sessionId", "orderIndex"])
             try db.create(index: "idx_set_logs_exercise", on: "set_logs", columns: ["exerciseLogId", "setIndex"])
             try db.create(index: "idx_exercise_states_updated", on: "exercise_states", columns: ["lastUpdatedAt"])
+            try db.create(index: "idx_custom_lifts_created", on: "custom_lifts", columns: ["createdAt"])
+            try db.create(index: "idx_custom_templates_created", on: "custom_templates", columns: ["createdAt"])
         }
 
         return migrator
@@ -244,6 +267,86 @@ class DatabaseManager: @unchecked Sendable {
             return Dictionary(
                 uniqueKeysWithValues: records.map { ($0.exerciseId, $0.toModel()) }
             )
+        }
+    }
+
+    // MARK: - Custom Lifts
+
+    func saveCustomLift(_ lift: Lift) async throws {
+        try await dbQueue.write { db in
+            let record = CustomLiftRecord(id: UUID(), lift: lift, createdAt: Date())
+            try record.save(db)
+        }
+        logger.debug("Saved custom lift: \(lift.name)")
+    }
+
+    func loadCustomLifts() async throws -> [Lift] {
+        try await dbQueue.read { db in
+            let records = try CustomLiftRecord
+                .order(Column("createdAt").desc)
+                .fetchAll(db)
+            return records.compactMap { $0.toModel()?.lift }
+        }
+    }
+
+    func deleteCustomLift(named name: String) async throws {
+        try await dbQueue.write { db in
+            // Find and delete the record with matching lift name
+            let records = try CustomLiftRecord.fetchAll(db)
+            for record in records {
+                if let model = record.toModel(), model.lift.name == name {
+                    try db.execute(sql: "DELETE FROM custom_lifts WHERE id = ?", arguments: [record.id])
+                    logger.debug("Deleted custom lift: \(name)")
+                    return
+                }
+            }
+        }
+    }
+
+    // MARK: - Custom Workout Templates
+
+    func saveCustomTemplate(_ template: WorkoutTemplate) async throws {
+        try await dbQueue.write { db in
+            let record = CustomTemplateRecord(id: template.id, template: template, createdAt: Date())
+            try record.save(db)
+        }
+        logger.debug("Saved custom template: \(template.name)")
+    }
+
+    func loadCustomTemplates() async throws -> [WorkoutTemplate] {
+        try await dbQueue.read { db in
+            let records = try CustomTemplateRecord
+                .order(Column("createdAt").desc)
+                .fetchAll(db)
+            return records.compactMap { $0.toModel()?.template }
+        }
+    }
+
+    func deleteCustomTemplate(id: UUID) async throws {
+        try await dbQueue.write { db in
+            try db.execute(sql: "DELETE FROM custom_templates WHERE id = ?", arguments: [id.uuidString])
+        }
+        logger.debug("Deleted custom template: \(id)")
+    }
+
+    // MARK: - Workout Rotation
+
+    func saveWorkoutRotation(_ templateIds: [UUID]) async throws {
+        try await dbQueue.write { db in
+            let record = WorkoutRotationRecord(templateIds: templateIds, updatedAt: Date())
+            try record.save(db)
+        }
+        logger.debug("Saved workout rotation with \(templateIds.count) templates")
+    }
+
+    func loadWorkoutRotation() async throws -> [UUID]? {
+        try await dbQueue.read { db in
+            guard let record = try WorkoutRotationRecord
+                .order(Column("updatedAt").desc)
+                .fetchOne(db) else {
+                return nil
+            }
+            return record.toModel()?.templateIds
         }
     }
 

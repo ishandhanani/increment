@@ -285,6 +285,30 @@ struct LiftLibrary {
 
     // MARK: - All Lifts
 
-    /// All lifts across all categories
-    static let allLifts: [Lift] = pushLifts + pullLifts + legLifts + cardioLifts
+    /// All built-in lifts across all categories
+    static let allBuiltInLifts: [Lift] = pushLifts + pullLifts + legLifts + cardioLifts
+
+    /// All lifts across all categories (built-in + custom)
+    /// - Parameter customLifts: User-created custom lifts from database
+    /// - Returns: Combined array of built-in and custom lifts
+    static func allLifts(including customLifts: [Lift] = []) -> [Lift] {
+        return allBuiltInLifts + customLifts
+    }
+
+    /// Get lifts for a specific category (built-in + custom)
+    /// - Parameters:
+    ///   - category: The lift category to filter by
+    ///   - customLifts: User-created custom lifts from database
+    /// - Returns: Lifts matching the category
+    static func lifts(for category: LiftCategory, including customLifts: [Lift] = []) -> [Lift] {
+        let builtIn: [Lift]
+        switch category {
+        case .push: builtIn = pushLifts
+        case .pull: builtIn = pullLifts
+        case .legs: builtIn = legLifts
+        case .cardio: builtIn = cardioLifts
+        }
+        let custom = customLifts.filter { $0.category == category }
+        return builtIn + custom
+    }
 }

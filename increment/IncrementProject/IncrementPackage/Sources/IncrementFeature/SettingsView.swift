@@ -7,6 +7,9 @@ public struct SettingsView: View {
     @Binding var isPresented: Bool
     @State private var showingDiagnostic = false
     @State private var showingCalibration = false
+    @State private var showingCustomExercises = false
+    @State private var showingCustomWorkouts = false
+    @State private var showingWorkoutRotation = false
 
     public init(isPresented: Binding<Bool>) {
         self._isPresented = isPresented
@@ -42,6 +45,36 @@ public struct SettingsView: View {
             // Settings Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    // Customization Section
+                    SettingsSection(title: "CUSTOMIZATION") {
+                        SettingButton(
+                            title: "Custom Exercises",
+                            description: "Add and manage your own exercises"
+                        ) {
+                            showingCustomExercises = true
+                        }
+
+                        Divider()
+                            .background(Color.white.opacity(0.1))
+
+                        SettingButton(
+                            title: "Custom Workouts",
+                            description: "Create custom workout templates"
+                        ) {
+                            showingCustomWorkouts = true
+                        }
+
+                        Divider()
+                            .background(Color.white.opacity(0.1))
+
+                        SettingButton(
+                            title: "Workout Rotation",
+                            description: "Manage workout day order"
+                        ) {
+                            showingWorkoutRotation = true
+                        }
+                    }
+
                     // Training Section
                     SettingsSection(title: "TRAINING") {
                         SettingButton(
@@ -77,6 +110,15 @@ public struct SettingsView: View {
                 }
                 .padding(24)
             }
+        }
+        .fullScreenCover(isPresented: $showingCustomExercises) {
+            CustomExercisesListView(isPresented: $showingCustomExercises)
+        }
+        .fullScreenCover(isPresented: $showingCustomWorkouts) {
+            CustomWorkoutTemplatesListView(isPresented: $showingCustomWorkouts)
+        }
+        .fullScreenCover(isPresented: $showingWorkoutRotation) {
+            WorkoutRotationView(isPresented: $showingWorkoutRotation)
         }
         .fullScreenCover(isPresented: $showingDiagnostic) {
             DiagnosticView(isPresented: $showingDiagnostic)
