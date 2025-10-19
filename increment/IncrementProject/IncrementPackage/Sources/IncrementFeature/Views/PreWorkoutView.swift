@@ -8,11 +8,31 @@ struct PreWorkoutView: View {
     @FocusState private var isTextFieldFocused: Bool
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
+        VStack(spacing: 0) {
+            // Back button header
+            HStack {
+                Button {
+                    sessionManager.discardSession()
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("←")
+                            .font(.system(.body, design: .monospaced))
+                        Text("Cancel")
+                            .font(.system(.body, design: .monospaced))
+                    }
+                    .foregroundColor(.white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .padding(20)
 
-            // Header
-            VStack(spacing: 12) {
+                Spacer()
+            }
+
+            VStack(spacing: 24) {
+                Spacer()
+
+                // Header
+                VStack(spacing: 12) {
                 Text("How are you feeling?")
                     .font(.system(.title2, design: .monospaced))
                     .fontWeight(.bold)
@@ -88,19 +108,20 @@ struct PreWorkoutView: View {
 
             Spacer()
 
-            // Action Bar
-            ActionBar {
-                let feeling = PreWorkoutFeeling(
-                    rating: selectedRating,
-                    note: feelingNote.isEmpty ? nil : feelingNote
-                )
-                sessionManager.logPreWorkoutFeeling(feeling)
-            } label: {
-                Text("START WORKOUT")
+                // Action Bar
+                ActionBar {
+                    let feeling = PreWorkoutFeeling(
+                        rating: selectedRating,
+                        note: feelingNote.isEmpty ? nil : feelingNote
+                    )
+                    sessionManager.logPreWorkoutFeeling(feeling)
+                } label: {
+                    Text("START WORKOUT")
+                }
             }
-        }
-        .onTapGesture {
-            isTextFieldFocused = false
+            .onTapGesture {
+                isTextFieldFocused = false
+            }
         }
     }
 }
