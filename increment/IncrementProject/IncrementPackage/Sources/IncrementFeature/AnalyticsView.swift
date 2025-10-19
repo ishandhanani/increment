@@ -48,9 +48,6 @@ public struct AnalyticsView: View {
                 TabButton(title: "EXERCISES", isSelected: selectedTab == .exercises) {
                     selectedTab = .exercises
                 }
-                TabButton(title: "VOLUME", isSelected: selectedTab == .volume) {
-                    selectedTab = .volume
-                }
             }
             .background(Color.black.opacity(0.2))
 
@@ -61,8 +58,6 @@ public struct AnalyticsView: View {
                     OverviewDashboardView()
                 case .exercises:
                     ExerciseProgressView()
-                case .volume:
-                    VolumeAnalyticsView()
                 }
             }
         }
@@ -74,7 +69,6 @@ public struct AnalyticsView: View {
 enum AnalyticsTab {
     case overview
     case exercises
-    case volume
 }
 
 // MARK: - Tab Button Component
