@@ -31,8 +31,6 @@ public struct ContentView: View {
                         StretchingView()
                     case .warmup(_):
                         WarmupView()
-                    case .load:
-                        LoadView()
                     case .workingSet:
                         WorkingSetView()
                     case .rest(_):

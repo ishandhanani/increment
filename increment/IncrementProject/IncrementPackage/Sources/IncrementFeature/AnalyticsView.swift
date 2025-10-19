@@ -14,34 +14,34 @@ public struct AnalyticsView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // Header with back button - matches ExerciseHeader pattern
+            // Header with back button
             HStack {
                 Button {
                     isPresented = false
                 } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Text("←")
-                        Text("BACK")
+                            .font(.system(.body, design: .monospaced))
+                        Text("Back")
+                            .font(.system(.body, design: .monospaced))
                     }
-                    .font(.system(.body, design: .monospaced))
                     .foregroundColor(.white.opacity(0.7))
                 }
                 .buttonStyle(.plain)
 
                 Spacer()
 
-                Text("ANALYTICS")
-                    .font(.system(.title3, design: .monospaced))
+                Text("Analytics")
+                    .font(.system(.title2, design: .monospaced))
                     .fontWeight(.bold)
                     .foregroundColor(.white)
             }
-            .foregroundColor(.white)
-            .padding(16)
+            .padding(20)
             .background(Color.black.opacity(0.3))
 
             // Analytics content
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 32) {
                     // Quick Stats Grid
                     QuickStatsGrid(stats: sessionManager.overviewStats)
 
@@ -132,37 +132,34 @@ struct QuickStatsGrid: View {
     let stats: OverviewStats
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("QUICK STATS")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.white.opacity(0.7))
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Overview")
+                .font(.system(.body, design: .monospaced))
+                .fontWeight(.bold)
+                .foregroundColor(.white)
 
             LazyVGrid(columns: [
                 GridItem(.flexible()),
                 GridItem(.flexible())
-            ], spacing: 12) {
+            ], spacing: 16) {
                 StatCard(
-                    title: "SESSIONS",
-                    value: "\(stats.totalSessions)",
-                    icon: "📊"
+                    title: "Sessions",
+                    value: "\(stats.totalSessions)"
                 )
 
                 StatCard(
-                    title: "VOLUME",
-                    value: formatVolume(stats.totalVolume),
-                    icon: "💪"
+                    title: "Volume",
+                    value: formatVolume(stats.totalVolume)
                 )
 
                 StatCard(
-                    title: "STREAK",
-                    value: "\(stats.currentStreak) days",
-                    icon: "🔥"
+                    title: "Streak",
+                    value: "\(stats.currentStreak) days"
                 )
 
                 StatCard(
-                    title: "AVG LIFT",
-                    value: "\(Int(stats.averageLift)) lb",
-                    icon: "⚖️"
+                    title: "Avg lift",
+                    value: "\(Int(stats.averageLift)) lb"
                 )
             }
         }
@@ -181,31 +178,27 @@ struct QuickStatsGrid: View {
 struct StatCard: View {
     let title: String
     let value: String
-    let icon: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(icon)
-                .font(.system(.title2))
-
-            Text(value)
-                .font(.system(.title2, design: .monospaced))
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-
+        VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundColor(.white.opacity(0.6))
+
+            Text(value)
+                .font(.system(.title3, design: .monospaced))
+                .fontWeight(.bold)
+                .foregroundColor(.white)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(20)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.white.opacity(0.05))
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.white.opacity(0.03))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.white.opacity(0.15), lineWidth: 1)
         )
     }
 }
@@ -216,10 +209,11 @@ struct RecentTrendChart: View {
     let trend: [VolumeDataPoint]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("VOLUME TREND (30 DAYS)")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.white.opacity(0.7))
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Volume trend (30 days)")
+                .font(.system(.body, design: .monospaced))
+                .fontWeight(.bold)
+                .foregroundColor(.white)
 
             Chart(trend) { dataPoint in
                 LineMark(
@@ -227,6 +221,7 @@ struct RecentTrendChart: View {
                     y: .value("Volume", dataPoint.volume)
                 )
                 .foregroundStyle(.white)
+                .lineStyle(StrokeStyle(lineWidth: 2))
                 .interpolationMethod(.catmullRom)
 
                 AreaMark(
@@ -235,7 +230,7 @@ struct RecentTrendChart: View {
                 )
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.white.opacity(0.3), .white.opacity(0.05)],
+                        colors: [.white.opacity(0.2), .white.opacity(0.02)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -243,28 +238,28 @@ struct RecentTrendChart: View {
                 .interpolationMethod(.catmullRom)
             }
             .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                AxisMarks(values: .automatic(desiredCount: 4)) { _ in
                     AxisValueLabel()
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.white.opacity(0.4))
                         .font(.system(.caption2, design: .monospaced))
                 }
             }
             .chartYAxis {
-                AxisMarks { _ in
+                AxisMarks(position: .leading) { _ in
                     AxisValueLabel()
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.white.opacity(0.4))
                         .font(.system(.caption2, design: .monospaced))
                 }
             }
-            .frame(height: 150)
-            .padding(16)
+            .frame(height: 180)
+            .padding(20)
             .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white.opacity(0.05))
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.white.opacity(0.03))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
             )
         }
     }
@@ -276,10 +271,11 @@ struct InsightsSection: View {
     let insights: [PerformanceInsight]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("INSIGHTS")
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.white.opacity(0.7))
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Insights")
+                .font(.system(.body, design: .monospaced))
+                .fontWeight(.bold)
+                .foregroundColor(.white)
 
             ForEach(insights) { insight in
                 InsightCard(insight: insight)
@@ -294,45 +290,50 @@ struct InsightCard: View {
     let insight: PerformanceInsight
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(iconForInsightType(insight.type))
-                    .font(.system(.title3))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                // Indicator dot
+                Circle()
+                    .fill(colorForInsightType(insight.type))
+                    .frame(width: 6, height: 6)
 
                 Text(insight.title)
                     .font(.system(.subheadline, design: .monospaced))
-                    .fontWeight(.bold)
+                    .fontWeight(.semibold)
                     .foregroundColor(.white)
+
+                Spacer()
             }
 
             Text(insight.message)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.white.opacity(0.8))
+                .font(.system(.callout, design: .monospaced))
+                .foregroundColor(.white.opacity(0.7))
+                .lineSpacing(4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(20)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.white.opacity(0.05))
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.white.opacity(0.03))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.white.opacity(0.15), lineWidth: 1)
         )
     }
 
-    private func iconForInsightType(_ type: InsightType) -> String {
+    private func colorForInsightType(_ type: InsightType) -> Color {
         switch type {
         case .feelingCorrelation:
-            return "💡"
+            return .blue
         case .consistencyPattern:
-            return "✨"
+            return .green
         case .challengingExercise:
-            return "💪"
+            return .orange
         case .bestPerforming:
-            return "🏆"
+            return .yellow
         case .streakAchievement:
-            return "🔥"
+            return .purple
         }
     }
 }
