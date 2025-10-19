@@ -99,7 +99,7 @@ struct IntroView: View {
                     if sessionManager.hasResumableSession {
                         sessionManager.discardSession()
                     }
-                    sessionManager.startSession()
+                    sessionManager.showWorkoutSelection()
                 } label: {
                     Text(sessionManager.hasResumableSession ? "START NEW WORKOUT" : "START WORKOUT")
                 }

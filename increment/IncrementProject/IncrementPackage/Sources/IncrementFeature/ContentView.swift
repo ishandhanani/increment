@@ -27,6 +27,8 @@ public struct ContentView: View {
                     switch sessionManager.sessionState {
                     case .intro:
                         IntroView(showAnalytics: $showingAnalytics, showSettings: $showingSettings)
+                    case .workoutSelection:
+                        WorkoutSelectionView()
                     case .preWorkout:
                         PreWorkoutView()
                     case .workoutOverview:

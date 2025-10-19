@@ -16,6 +16,7 @@ public class SessionManager {
     public var currentExerciseLog: ExerciseSessionLog?
     public var nextPrescription: (reps: Int, weight: Double)?
     public var isFirstExercise: Bool = true
+    public var isInitialized: Bool = false
 
     // MARK: - Data
 
@@ -25,6 +26,7 @@ public class SessionManager {
     // Workout system
     public var workoutCycle: WorkoutCycle?
     public var currentWorkoutTemplate: WorkoutTemplate?
+    public var suggestedWorkoutType: LiftCategory = .push  // For workout selection screen
 
     // Timer management
     private var restTimer: RestTimer?
@@ -37,8 +39,9 @@ public class SessionManager {
 
     public enum SessionState: Equatable {
         case intro
+        case workoutSelection  // NEW: Shows workout type before committing
         case preWorkout
-        case workoutOverview  // NEW: Shows workout summary before stretching
+        case workoutOverview  // Shows workout summary before stretching
         case stretching(timeRemaining: Int)  // 5-minute stretching countdown
         case warmup(step: Int)  // 0 = 50%×5, 1 = 70%×3
         case workingSet
@@ -51,18 +54,31 @@ public class SessionManager {
 
     public init() {
         loadDefaultWorkoutCycle()
-        loadPersistedState()
+        // Start loading persisted state asynchronously
+        Task {
+            await loadPersistedState()
+        }
+    }
+
+    /// Initialize and wait for persisted state to load
+    public func initialize() async {
+        await loadPersistedState()
     }
 
     // MARK: - Resume State
 
     public var hasResumableSession: Bool {
-        guard let session = currentSession, session.isActive else {
-            return false
-        }
+        guard isInitialized else { return false }
 
-        // Check if session is not stale (within 24 hours)
-        return !PersistenceManager.shared.isSessionStale(session)
+        // Depend on currentSession to trigger SwiftUI updates
+        // This ensures the view refreshes when discardSession() sets currentSession = nil
+        _ = currentSession
+
+        // Query DB directly for active session
+        if let session = PersistenceManager.shared.loadCurrentSessionSync() {
+            return session.isActive && !PersistenceManager.shared.isSessionStale(session)
+        }
+        return false
     }
 
     public func resumeSession() {
@@ -188,6 +204,11 @@ public class SessionManager {
 
     public func discardSession() {
         AppLogger.session.notice("Discarding current session")
+
+        // Clear database first (synchronously)
+        PersistenceManager.shared.clearCurrentSessionSync()
+
+        // Then clear in-memory state
         currentSession = nil
         currentExerciseIndex = 0
         currentSetIndex = 0
@@ -196,7 +217,6 @@ public class SessionManager {
         nextPrescription = nil
         isFirstExercise = true
 
-        PersistenceManager.shared.clearCurrentSession()
         AppLogger.session.info("Session discarded, reset to intro")
     }
 
@@ -204,6 +224,8 @@ public class SessionManager {
         switch state {
         case .intro:
             return "intro"
+        case .workoutSelection:
+            return "workoutSelection"
         case .preWorkout:
             return "preWorkout"
         case .workoutOverview:
@@ -230,6 +252,8 @@ public class SessionManager {
         switch first {
         case "intro":
             return .intro
+        case "workoutSelection":
+            return .workoutSelection
         case "preWorkout":
             return .preWorkout
         case "workoutOverview":
@@ -262,33 +286,59 @@ public class SessionManager {
 
     // MARK: - Session Control
 
-    public func startSession() {
-        AppLogger.session.notice("Starting new session with dynamic generation")
+    /// Step 1: Show workout type selection (no DB write yet)
+    public func showWorkoutSelection() {
+        AppLogger.session.notice("Showing workout selection")
+
+        // Query last workout from DB
+        let sessions = PersistenceManager.shared.loadSessionsSync()
+        let lastType = sessions.first?.workoutTemplate?.workoutType
+        let nextType = lastType?.next ?? .push
+
+        suggestedWorkoutType = nextType
+        sessionState = .workoutSelection
+
+        AppLogger.session.info("Suggested workout type: \(nextType.rawValue, privacy: .public)")
+    }
+
+    /// Step 2: User confirmed - create session and persist immediately
+    public func confirmWorkoutStart() {
+        AppLogger.session.notice("Confirmed workout start: \(self.suggestedWorkoutType.rawValue, privacy: .public)")
 
         // Reset session state
         currentExerciseIndex = 0
         currentSetIndex = 0
         isFirstExercise = true
 
-        AppLogger.session.debug("Session initialized, workout will be generated after pre-workout feeling")
+        // Generate template
+        currentWorkoutTemplate = WorkoutBuilder.build(type: suggestedWorkoutType)
+        AppLogger.session.info("Generated template: \(self.currentWorkoutTemplate?.name ?? "unknown", privacy: .public)")
 
-        // Create a temporary session (template will be added after pre-workout feeling)
-        currentSession = Session()
+        // Create new session
+        currentSession = Session(
+            workoutTemplate: currentWorkoutTemplate,
+            isActive: true
+        )
 
-        // Show pre-workout feeling screen
+        // 🔴 CRITICAL: First DB write happens here
+        persistCurrentState()
+        AppLogger.session.notice("Session persisted to database")
+
+        // Move to pre-workout feeling
         sessionState = .preWorkout
     }
 
+    /// Cancel workout selection - go back to intro with no DB changes
+    public func cancelWorkoutSelection() {
+        AppLogger.session.debug("Cancelled workout selection")
+        sessionState = .intro
+    }
+
     public func logPreWorkoutFeeling(_ feeling: PreWorkoutFeeling) {
+        AppLogger.session.info("Logged pre-workout feeling: \(feeling.rating, privacy: .public)")
         currentSession?.preWorkoutFeeling = feeling
 
-        // Dynamically generate next workout based on cycle
-        let nextType = workoutCycle?.lastCompletedType?.next ?? .push
-        AppLogger.session.notice("Generating \(nextType.rawValue, privacy: .public) workout")
-        currentWorkoutTemplate = WorkoutBuilder.build(type: nextType)
-        AppLogger.session.info("Workout template generated: \(self.currentWorkoutTemplate?.name ?? "unknown", privacy: .public)")
-
-        persistSession()
+        persistCurrentState()
         sessionState = .workoutOverview
     }
 
@@ -300,25 +350,6 @@ public class SessionManager {
         // Convert template to ExerciseProfiles for STEEL compatibility
         let profiles = WorkoutTemplateConverter.toExerciseProfiles(from: template)
 
-        // Update session with template
-        if let oldSession = currentSession {
-            currentSession = Session(
-                id: oldSession.id,
-                date: oldSession.date,
-                preWorkoutFeeling: oldSession.preWorkoutFeeling,
-                exerciseLogs: oldSession.exerciseLogs,
-                stats: oldSession.stats,
-                synced: oldSession.synced,
-                workoutTemplate: template,
-                isActive: oldSession.isActive,
-                currentExerciseIndex: oldSession.currentExerciseIndex,
-                currentSetIndex: oldSession.currentSetIndex,
-                sessionStateRaw: oldSession.sessionStateRaw,
-                currentExerciseLog: oldSession.currentExerciseLog,
-                lastUpdated: Date()
-            )
-        }
-
         // Populate working dictionary for STEEL lookups
         exerciseProfiles = profiles
 
@@ -326,7 +357,7 @@ public class SessionManager {
 
         // Start stretching phase
         startStretchingPhase()
-        persistSession()
+        persistCurrentState()
     }
 
     // MARK: - Stretching Phase
@@ -334,7 +365,7 @@ public class SessionManager {
     public func startStretchingPhase() {
         let stretchDuration = 300  // 5 minutes
         startStretchingTimer(duration: stretchDuration)
-        persistSession()
+        persistCurrentState()
     }
 
     public func skipStretching() {
@@ -391,7 +422,7 @@ public class SessionManager {
             computeInitialPrescription()
         }
 
-        persistSession()
+        persistCurrentState()
 
         // Update Live Activity
         Task {
@@ -480,7 +511,7 @@ public class SessionManager {
         // Move to rest
         currentSetIndex += 1
         startRestTimer(duration: profile.defaultRestSec)
-        persistSession()
+        persistCurrentState()
     }
 
     public func advanceToNextSet() {
@@ -630,7 +661,7 @@ public class SessionManager {
 
         // Save session
         currentSession = session
-        persistSession()
+        persistCurrentState()
 
         sessionState = .done
 
@@ -668,30 +699,9 @@ public class SessionManager {
     }
 
     private func getRecentLoads(exerciseId: String) -> [Double] {
-        // Get all sessions from persistence
-        let allSessions = PersistenceManager.shared.loadSessions()
-
-        // Calculate date 7 days ago
-        let calendar = Calendar.current
-        guard let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: Date()) else {
-            return []
-        }
-
-        // Filter sessions from last 7 days
-        let recentSessions = allSessions.filter { session in
-            session.date >= sevenDaysAgo
-        }
-
-        // Extract start weights for the specific exercise
-        let startWeights = recentSessions.compactMap { session -> Double? in
-            // Find exercise log for this exercise in the session
-            guard let exerciseLog = session.exerciseLogs.first(where: { $0.exerciseId == exerciseId }) else {
-                return nil
-            }
-            return exerciseLog.startWeight
-        }
-
-        return startWeights
+        // For now, return empty array - this will be loaded async when needed
+        // TODO: Make this async or cache sessions in memory
+        return []
     }
 
     private func updateExerciseState(exerciseId: String, startLoad: Double, decision: SessionDecision) {
@@ -706,56 +716,66 @@ public class SessionManager {
 
     // MARK: - Persistence
 
-    private func persistSession() {
-        guard var session = currentSession else { return }
+    /// Persist current state to database (synchronous - critical path)
+    private func persistCurrentState() {
+        guard var session = currentSession else {
+            AppLogger.session.error("Attempted to persist but no current session exists")
+            return
+        }
 
-        // Update resume state
+        // Update all state fields
         session.currentExerciseIndex = currentExerciseIndex
         session.currentSetIndex = currentSetIndex
         session.sessionStateRaw = serializeSessionState(sessionState)
-        session.currentExerciseLog = currentExerciseLog  // Save in-progress exercise log
+        session.currentExerciseLog = currentExerciseLog
         session.lastUpdated = Date()
 
         // Mark as inactive if done
         if case .done = sessionState {
             session.isActive = false
+            AppLogger.session.info("Marking session as inactive (done)")
         }
 
         currentSession = session
 
-        // Save current session
-        PersistenceManager.shared.saveCurrentSession(session)
+        // 🔴 CRITICAL: Synchronous DB write
+        PersistenceManager.shared.saveCurrentSessionSync(session)
 
-        // Add to history
-        var sessions = PersistenceManager.shared.loadSessions()
+        // Update history
+        var sessions = PersistenceManager.shared.loadSessionsSync()
         if let index = sessions.firstIndex(where: { $0.id == session.id }) {
             sessions[index] = session
         } else {
             sessions.append(session)
         }
-        PersistenceManager.shared.saveSessions(sessions)
+        PersistenceManager.shared.saveSessionsSync(sessions)
+
+        AppLogger.session.debug("State persisted: \(self.serializeSessionState(self.sessionState), privacy: .public)")
     }
 
     private func persistExerciseStates() {
-        PersistenceManager.shared.saveExerciseStates(exerciseStates)
+        Task {
+            await PersistenceManager.shared.saveExerciseStates(exerciseStates)
+        }
     }
 
-    private func loadPersistedState() {
+    private func loadPersistedState() async {
         AppLogger.session.debug("Loading persisted session state")
 
         // Load exercise states (always needed for progression tracking)
-        exerciseStates = PersistenceManager.shared.loadExerciseStates()
+        let states = await PersistenceManager.shared.loadExerciseStates()
+        exerciseStates = states
 
         // IMPORTANT: Skip loading old workout plans and profiles
         // We're now using the template system exclusively
         AppLogger.session.debug("Using template system, skipping legacy workout plans")
 
         // Load current session if exists
-        if let savedSession = PersistenceManager.shared.loadCurrentSession() {
+        if let savedSession = await PersistenceManager.shared.loadCurrentSession() {
             // Check if session is stale
             if PersistenceManager.shared.isSessionStale(savedSession) {
                 // Clear stale session
-                PersistenceManager.shared.clearCurrentSession()
+                await PersistenceManager.shared.clearCurrentSession()
                 AppLogger.session.info("Cleared stale session")
             } else {
                 // Keep session for potential resume
@@ -768,6 +788,9 @@ public class SessionManager {
                 }
             }
         }
+
+        // Mark as initialized
+        isInitialized = true
     }
 
     // MARK: - Default Data
