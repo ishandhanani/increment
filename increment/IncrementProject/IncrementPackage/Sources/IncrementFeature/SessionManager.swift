@@ -414,8 +414,8 @@ public class SessionManager {
 
         currentSetIndex = 0
 
-        // Only do warmups for the first exercise
-        if isFirstExercise {
+        // Determine if warmup is needed based on exercise type and context
+        if isFirstExercise && shouldWarmup(exerciseId: exerciseId) {
             sessionState = .warmup(step: 0)
             isFirstExercise = false
         } else {
@@ -438,6 +438,57 @@ public class SessionManager {
         }
     }
 
+    /// Determines if an exercise needs warmup sets
+    private func shouldWarmup(exerciseId: String) -> Bool {
+        guard let template = currentSession?.workoutTemplate,
+              let exercise = template.exercises.first(where: { $0.lift.id == exerciseId }) else {
+            return true  // Default to warmup if unknown
+        }
+
+        let lift = exercise.lift
+
+        // Skip warmups for cardio
+        if lift.equipment == .cardioMachine || lift.category == .cardio {
+            AppLogger.session.debug("Skipping warmup for cardio exercise: \(lift.name, privacy: .public)")
+            return false
+        }
+
+        // Skip warmups for bodyweight exercises
+        if lift.equipment == .bodyweight {
+            AppLogger.session.debug("Skipping warmup for bodyweight exercise: \(lift.name, privacy: .public)")
+            return false
+        }
+
+        // All other weighted exercises get warmups
+        AppLogger.session.debug("Warmup required for weighted exercise: \(lift.name, privacy: .public)")
+        return true
+    }
+
+    /// Returns the number of warmup steps for this exercise based on weight and equipment
+    private func getWarmupStepCount(exerciseId: String) -> Int {
+        guard let exerciseLog = currentExerciseLog else { return 2 }
+        guard let template = currentSession?.workoutTemplate,
+              let exercise = template.exercises.first(where: { $0.lift.id == exerciseId }) else {
+            return 2  // Default to 2 steps
+        }
+
+        let startWeight = exerciseLog.startWeight
+        let equipment = exercise.lift.equipment
+
+        // Barbell exercises with heavy weights get 3 warmup sets
+        if equipment == .barbell && startWeight > 225 {
+            return 3  // 40%×5, 60%×4, 80%×2
+        }
+
+        // Dumbbell and machine exercises get 1 lighter warmup
+        if equipment == .dumbbell || equipment == .machine {
+            return 1  // Just 70%×5
+        }
+
+        // Default: 2 sets for most barbell work
+        return 2  // 50%×5, 70%×3
+    }
+
     // MARK: - Warmup Flow
 
     public func advanceWarmup() {
@@ -445,9 +496,11 @@ public class SessionManager {
         guard let exerciseLog = currentExerciseLog,
               exerciseProfiles[exerciseLog.exerciseId] != nil else { return }
 
-        if step == 0 {
-            // Move to 70%×3
-            sessionState = .warmup(step: 1)
+        let totalSteps = getWarmupStepCount(exerciseId: exerciseLog.exerciseId)
+
+        if step < totalSteps - 1 {
+            // Move to next warmup step
+            sessionState = .warmup(step: step + 1)
         } else {
             // Warmup complete, move to working set
             sessionState = .workingSet
@@ -458,9 +511,35 @@ public class SessionManager {
     public func getWarmupPrescription() -> (weight: Double, reps: Int)? {
         guard case .warmup(let step) = sessionState else { return nil }
         guard let exerciseLog = currentExerciseLog else { return nil }
+        guard let template = currentSession?.workoutTemplate,
+              let exercise = template.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }) else {
+            return nil
+        }
 
         let startWeight = exerciseLog.startWeight
+        let equipment = exercise.lift.equipment
+        let totalSteps = getWarmupStepCount(exerciseId: exerciseLog.exerciseId)
 
+        // Heavy barbell (3 steps): 40%×5, 60%×4, 80%×2
+        if equipment == .barbell && totalSteps == 3 {
+            switch step {
+            case 0:
+                return (weight: startWeight * 0.4, reps: 5)
+            case 1:
+                return (weight: startWeight * 0.6, reps: 4)
+            case 2:
+                return (weight: startWeight * 0.8, reps: 2)
+            default:
+                return nil
+            }
+        }
+
+        // Light equipment (1 step): 70%×5
+        if (equipment == .dumbbell || equipment == .machine) && totalSteps == 1 {
+            return (weight: startWeight * 0.7, reps: 5)
+        }
+
+        // Standard barbell (2 steps): 50%×5, 70%×3
         switch step {
         case 0:
             return (weight: startWeight * 0.5, reps: 5)
