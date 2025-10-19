@@ -6,7 +6,7 @@ import Charts
 @MainActor
 struct ExerciseProgressView: View {
     @Environment(SessionManager.self) private var sessionManager
-    @State private var selectedExerciseId: UUID?
+    @State private var selectedExerciseName: String?
 
     var body: some View {
         ScrollView {
@@ -15,17 +15,17 @@ struct ExerciseProgressView: View {
                 if !sessionManager.exercisesPerformed.isEmpty {
                     ExerciseSelector(
                         exercises: sessionManager.exercisesPerformed,
-                        selectedId: $selectedExerciseId
+                        selectedName: $selectedExerciseName
                     )
 
                     // Progression Chart
-                    if let exerciseId = selectedExerciseId {
+                    if let exerciseName = selectedExerciseName {
                         ProgressionChart(
-                            progression: sessionManager.progressionData(for: exerciseId)
+                            progression: sessionManager.progressionData(for: exerciseName)
                         )
 
                         // Exercise Summary
-                        if let summary = sessionManager.exerciseSummary(for: exerciseId) {
+                        if let summary = sessionManager.exerciseSummary(for: exerciseName) {
                             ExerciseSummaryCard(summary: summary)
                         }
                     } else {
@@ -40,9 +40,9 @@ struct ExerciseProgressView: View {
         }
         .onAppear {
             // Select first exercise by default
-            if selectedExerciseId == nil,
+            if selectedExerciseName == nil,
                let firstExercise = sessionManager.exercisesPerformed.first {
-                selectedExerciseId = firstExercise.id
+                selectedExerciseName = firstExercise.name
             }
         }
     }
@@ -52,7 +52,7 @@ struct ExerciseProgressView: View {
 
 struct ExerciseSelector: View {
     let exercises: [ExerciseProfile]
-    @Binding var selectedId: UUID?
+    @Binding var selectedName: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -63,12 +63,12 @@ struct ExerciseSelector: View {
             Menu {
                 ForEach(exercises) { exercise in
                     Button(exercise.name) {
-                        selectedId = exercise.id
+                        selectedName = exercise.name
                     }
                 }
             } label: {
                 HStack {
-                    if let selected = exercises.first(where: { $0.id == selectedId }) {
+                    if let selected = exercises.first(where: { $0.name == selectedName }) {
                         Text(selected.name)
                     } else {
                         Text("Select Exercise")

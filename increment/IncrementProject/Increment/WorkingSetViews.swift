@@ -11,7 +11,7 @@ struct LoadView: View {
         VStack(spacing: 0) {
             // Header
             if let exerciseLog = sessionManager.currentExerciseLog,
-               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId],
+               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseName],
                let prescription = sessionManager.nextPrescription {
                 ExerciseHeader(
                     exerciseName: profile.name,
@@ -32,7 +32,7 @@ struct LoadView: View {
 
             // Plate breakdown
             if let exerciseLog = sessionManager.currentExerciseLog,
-               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId],
+               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseName],
                let prescription = sessionManager.nextPrescription,
                let plateOptions = profile.plateOptions {
                 let plates = SteelProgressionEngine.computePlateBreakdown(
@@ -76,7 +76,7 @@ struct WorkingSetView: View {
         VStack(spacing: 0) {
             // Header
             if let exerciseLog = sessionManager.currentExerciseLog,
-               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId],
+               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseName],
                let prescription = sessionManager.nextPrescription {
                 ExerciseHeader(
                     exerciseName: profile.name,

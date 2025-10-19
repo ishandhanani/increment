@@ -128,7 +128,7 @@ public struct ExerciseProfile: Codable, Identifiable, Sendable {
 // MARK: - ExerciseState
 
 public struct ExerciseState: Codable, Sendable {
-    public let exerciseId: UUID
+    public let exerciseName: String
     public var lastStartLoad: Double
     public var lastDecision: SessionDecision?
     public var lastUpdatedAt: Date
@@ -171,7 +171,7 @@ public struct SetLog: Codable, Identifiable, Sendable {
 
 public struct ExerciseSessionLog: Codable, Identifiable, Sendable {
     public let id: UUID
-    public let exerciseId: UUID
+    public let exerciseName: String
     public let startWeight: Double
     public var setLogs: [SetLog]
     public var sessionDecision: SessionDecision?
@@ -179,14 +179,14 @@ public struct ExerciseSessionLog: Codable, Identifiable, Sendable {
 
     public init(
         id: UUID = UUID(),
-        exerciseId: UUID,
+        exerciseName: String,
         startWeight: Double,
         setLogs: [SetLog] = [],
         sessionDecision: SessionDecision? = nil,
         nextStartWeight: Double? = nil
     ) {
         self.id = id
-        self.exerciseId = exerciseId
+        self.exerciseName = exerciseName
         self.startWeight = startWeight
         self.setLogs = setLogs
         self.sessionDecision = sessionDecision
@@ -218,7 +218,6 @@ public struct Session: Codable, Identifiable, Sendable {
 
     // Session-scoped workout data (stored template for this session)
     public var workoutTemplate: WorkoutTemplate?
-    public var exerciseProfilesForSession: [UUID: ExerciseProfile]?  // Still needed for STEEL lookup
 
     // Resume state fields
     public var isActive: Bool
@@ -236,7 +235,6 @@ public struct Session: Codable, Identifiable, Sendable {
         stats: SessionStats = SessionStats(totalVolume: 0),
         synced: Bool = false,
         workoutTemplate: WorkoutTemplate? = nil,
-        exerciseProfilesForSession: [UUID: ExerciseProfile]? = nil,
         isActive: Bool = true,
         currentExerciseIndex: Int? = nil,
         currentSetIndex: Int? = nil,
@@ -251,7 +249,6 @@ public struct Session: Codable, Identifiable, Sendable {
         self.stats = stats
         self.synced = synced
         self.workoutTemplate = workoutTemplate
-        self.exerciseProfilesForSession = exerciseProfilesForSession
         self.isActive = isActive
         self.currentExerciseIndex = currentExerciseIndex
         self.currentSetIndex = currentSetIndex

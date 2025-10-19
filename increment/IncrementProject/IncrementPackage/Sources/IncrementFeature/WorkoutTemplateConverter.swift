@@ -48,9 +48,9 @@ struct WorkoutTemplateConverter {
     }
 
     /// Converts a WorkoutTemplate to dictionary of ExerciseProfiles
-    /// Returns: [UUID: ExerciseProfile]
-    static func toExerciseProfiles(from template: WorkoutTemplate) -> [UUID: ExerciseProfile] {
-        var profiles: [UUID: ExerciseProfile] = [:]
+    /// Returns: [String: ExerciseProfile] keyed by exercise name
+    static func toExerciseProfiles(from template: WorkoutTemplate) -> [String: ExerciseProfile] {
+        var profiles: [String: ExerciseProfile] = [:]
 
         // Convert each WorkoutExercise to an ExerciseProfile
         for workoutExercise in template.exercises.sorted(by: { $0.order < $1.order }) {
@@ -59,7 +59,7 @@ struct WorkoutTemplateConverter {
                 sets: workoutExercise.targetSets,
                 restSec: Int(workoutExercise.restTime)
             )
-            profiles[profile.id] = profile
+            profiles[profile.name] = profile
         }
 
         return profiles
