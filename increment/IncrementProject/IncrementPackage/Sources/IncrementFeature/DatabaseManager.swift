@@ -3,6 +3,15 @@ import GRDB
 import OSLog
 
 /// Manages SQLite database using GRDB
+///
+/// Thread Safety:
+/// - DatabaseManager uses GRDB's DatabaseQueue which is thread-safe
+/// - All database operations are serialized through the queue
+/// - Reads and writes are properly isolated
+/// - The @unchecked Sendable conformance is safe because:
+///   1. dbQueue (DatabaseQueue) is internally thread-safe
+///   2. logger is an immutable value (OSLog)
+///   3. All mutable state is contained within the thread-safe dbQueue
 class DatabaseManager: @unchecked Sendable {
     static let shared = DatabaseManager()
 

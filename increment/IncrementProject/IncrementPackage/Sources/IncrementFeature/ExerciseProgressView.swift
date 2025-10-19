@@ -38,6 +38,10 @@ struct ExerciseProgressView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(24)
         }
+        .task {
+            // Refresh analytics data when view appears
+            await sessionManager.refreshSessions()
+        }
         .onAppear {
             // Select first exercise by default (using exercise ID)
             if selectedExerciseId == nil,

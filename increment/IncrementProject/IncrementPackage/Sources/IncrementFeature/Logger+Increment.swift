@@ -25,5 +25,8 @@ public enum AppLogger {
     /// Persistence layer operations
     public static let persistence = Logger(subsystem: subsystem, category: "persistence")
 
+    /// Analytics data processing and caching
+    public static let analytics = Logger(subsystem: subsystem, category: "analytics")
+
     private static let subsystem = "com.increment.app"
 }

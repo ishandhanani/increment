@@ -339,7 +339,9 @@ public class SessionManager {
         currentSession?.preWorkoutFeeling = feeling
 
         persistCurrentState()
-        sessionState = .workoutOverview
+
+        // Skip workout overview and go straight to starting the workout
+        startWorkoutFromTemplate()
     }
 
     // MARK: - Workout Overview
@@ -412,12 +414,25 @@ public class SessionManager {
 
         currentSetIndex = 0
 
-        // Only do warmups for the first exercise
-        if isFirstExercise {
-            sessionState = .warmup(step: 0)
-            isFirstExercise = false
+        // Use STEEL to determine warmup prescription
+        if isFirstExercise, let exercise = currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseId }) {
+            let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
+                equipment: exercise.lift.equipment,
+                workingWeight: startWeight,
+                category: exercise.lift.category
+            )
+
+            if warmupPrescription.needsWarmup {
+                AppLogger.session.debug("STEEL prescribed \(warmupPrescription.sets.count) warmup sets for \(exercise.lift.name, privacy: .public)")
+                sessionState = .warmup(step: 0)
+                isFirstExercise = false
+            } else {
+                AppLogger.session.debug("STEEL skipped warmup for \(exercise.lift.name, privacy: .public)")
+                sessionState = .workingSet
+                computeInitialPrescription()
+            }
         } else {
-            // Skip warmups, go directly to working set
+            // Not first exercise - skip warmups
             sessionState = .workingSet
             computeInitialPrescription()
         }
@@ -441,11 +456,17 @@ public class SessionManager {
     public func advanceWarmup() {
         guard case .warmup(let step) = sessionState else { return }
         guard let exerciseLog = currentExerciseLog,
-              exerciseProfiles[exerciseLog.exerciseId] != nil else { return }
+              let exercise = currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }) else { return }
 
-        if step == 0 {
-            // Move to 70%×3
-            sessionState = .warmup(step: 1)
+        let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
+            equipment: exercise.lift.equipment,
+            workingWeight: exerciseLog.startWeight,
+            category: exercise.lift.category
+        )
+
+        if step < warmupPrescription.sets.count - 1 {
+            // Move to next warmup step
+            sessionState = .warmup(step: step + 1)
         } else {
             // Warmup complete, move to working set
             sessionState = .workingSet
@@ -455,18 +476,21 @@ public class SessionManager {
 
     public func getWarmupPrescription() -> (weight: Double, reps: Int)? {
         guard case .warmup(let step) = sessionState else { return nil }
-        guard let exerciseLog = currentExerciseLog else { return nil }
-
-        let startWeight = exerciseLog.startWeight
-
-        switch step {
-        case 0:
-            return (weight: startWeight * 0.5, reps: 5)
-        case 1:
-            return (weight: startWeight * 0.7, reps: 3)
-        default:
+        guard let exerciseLog = currentExerciseLog,
+              let exercise = currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }) else {
             return nil
         }
+
+        let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
+            equipment: exercise.lift.equipment,
+            workingWeight: exerciseLog.startWeight,
+            category: exercise.lift.category
+        )
+
+        guard step < warmupPrescription.sets.count else { return nil }
+        let warmupSet = warmupPrescription.sets[step]
+
+        return (weight: warmupSet.weight, reps: warmupSet.reps)
     }
 
     // MARK: - Working Set Flow
@@ -664,6 +688,9 @@ public class SessionManager {
         persistCurrentState()
 
         sessionState = .done
+
+        // Invalidate analytics cache so new session appears immediately
+        invalidateAnalyticsCache()
 
         // End Live Activity
         Task {

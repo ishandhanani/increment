@@ -7,55 +7,134 @@ public struct WorkoutSelectionView: View {
         sessionManager.suggestedWorkoutType
     }
 
+    private var template: WorkoutTemplate? {
+        // Generate preview template for display
+        WorkoutBuilder.build(type: suggestedType)
+    }
+
     public var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            VStack(spacing: 40) {
-                Spacer()
-
-                // Workout Type Display
-                VStack(spacing: 16) {
-                    Text("Today's Workout")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-
-                    Text(suggestedType.rawValue.uppercased())
-                        .font(.system(size: 72, weight: .black, design: .default))
-                        .foregroundStyle(.white)
-                }
-
-                Spacer()
-
-                // Action Buttons
-                VStack(spacing: 16) {
-                    Button {
-                        sessionManager.confirmWorkoutStart()
-                    } label: {
-                        Text("START WORKOUT")
-                            .font(.headline)
-                            .foregroundStyle(.black)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Color.green)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+        VStack(spacing: 0) {
+            // Back button header
+            HStack {
+                Button {
+                    sessionManager.cancelWorkoutSelection()
+                } label: {
+                    HStack(spacing: 8) {
+                        Text("←")
+                            .font(.system(.body, design: .monospaced))
+                        Text("Cancel")
+                            .font(.system(.body, design: .monospaced))
                     }
+                    .foregroundColor(.white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .padding(24)
 
-                    Button {
-                        sessionManager.cancelWorkoutSelection()
-                    } label: {
-                        Text("CANCEL")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Color.gray.opacity(0.3))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                Spacer()
+            }
+
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Workout header
+                    if let template = template {
+                        VStack(alignment: .leading, spacing: 24) {
+                            // Workout type
+                            Text(template.name.uppercased())
+                                .font(.system(.largeTitle, design: .monospaced))
+                                .fontWeight(.bold)
+
+                            // Workout details
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("TYPE: \(template.workoutType.rawValue.uppercased())")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .opacity(0.7)
+
+                                if !template.exercises.isEmpty {
+                                    Text("EXERCISES: \(template.exercises.count)")
+                                        .font(.system(.caption, design: .monospaced))
+                                        .opacity(0.7)
+                                }
+
+                                if let duration = template.estimatedDuration {
+                                    let minutes = Int(duration / 60)
+                                    Text("EST. TIME: \(minutes) MIN")
+                                        .font(.system(.caption, design: .monospaced))
+                                        .opacity(0.7)
+                                }
+                            }
+
+                            // Exercise list
+                            if !template.exercises.isEmpty {
+                                Divider()
+                                    .background(Color.white.opacity(0.2))
+                                    .padding(.vertical, 8)
+
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("EXERCISES:")
+                                        .font(.system(.body, design: .monospaced))
+                                        .fontWeight(.bold)
+                                        .opacity(0.7)
+
+                                    ForEach(template.exercises.sorted(by: { $0.order < $1.order }), id: \.lift.name) { exercise in
+                                        HStack(spacing: 12) {
+                                            Text("\(exercise.order).")
+                                                .font(.system(.body, design: .monospaced))
+                                                .opacity(0.5)
+                                                .frame(width: 24, alignment: .trailing)
+
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(exercise.lift.name)
+                                                    .font(.system(.body, design: .monospaced))
+
+                                                HStack(spacing: 12) {
+                                                    Text("\(exercise.targetSets) sets")
+                                                        .font(.system(.caption, design: .monospaced))
+                                                        .opacity(0.6)
+
+                                                    Text("•")
+                                                        .opacity(0.4)
+
+                                                    Text("\(exercise.lift.steelConfig.repRange.lowerBound)-\(exercise.lift.steelConfig.repRange.upperBound) reps")
+                                                        .font(.system(.caption, design: .monospaced))
+                                                        .opacity(0.6)
+
+                                                    if exercise.priority == .core {
+                                                        Text("•")
+                                                            .opacity(0.4)
+
+                                                        Text("CORE")
+                                                            .font(.system(.caption, design: .monospaced))
+                                                            .fontWeight(.bold)
+                                                            .opacity(0.8)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(24)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
+                        .padding(.horizontal, 24)
+                        .padding(.top, 8)
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
+            }
+
+            // Action Bar
+            ActionBar {
+                sessionManager.confirmWorkoutStart()
+            } label: {
+                Text("START WORKOUT")
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(red: 0.1, green: 0.15, blue: 0.3))
+        .foregroundColor(.white)
     }
 }
