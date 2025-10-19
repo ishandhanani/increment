@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Combine
 import Observation
 import OSLog
@@ -25,6 +26,9 @@ public class SessionManager {
     // Workout system
     public var workoutCycle: WorkoutCycle?
     public var currentWorkoutTemplate: WorkoutTemplate?
+
+    // ModelContext for SwiftData (injected after init)
+    public var modelContext: ModelContext?
 
     // Timer management
     private var restTimer: RestTimer?
@@ -196,7 +200,8 @@ public class SessionManager {
         nextPrescription = nil
         isFirstExercise = true
 
-        PersistenceManager.shared.clearCurrentSession()
+        guard let context = modelContext else { return }
+        PersistenceManager.shared.clearCurrentSession(in: context)
         AppLogger.session.info("Session discarded, reset to intro")
     }
 
@@ -263,6 +268,11 @@ public class SessionManager {
     // MARK: - Session Control
 
     public func startSession() {
+        guard let context = modelContext else {
+            AppLogger.session.error("Cannot start session: ModelContext not available")
+            return
+        }
+
         AppLogger.session.notice("Starting new session with dynamic generation")
 
         // Reset session state
@@ -272,8 +282,10 @@ public class SessionManager {
 
         AppLogger.session.debug("Session initialized, workout will be generated after pre-workout feeling")
 
-        // Create a temporary session (template will be added after pre-workout feeling)
-        currentSession = Session()
+        // Create a new session and insert into SwiftData
+        let newSession = Session()
+        context.insert(newSession)
+        currentSession = newSession
 
         // Show pre-workout feeling screen
         sessionState = .preWorkout
@@ -668,8 +680,10 @@ public class SessionManager {
     }
 
     private func getRecentLoads(exerciseId: String) -> [Double] {
+        guard let context = modelContext else { return [] }
+
         // Get all sessions from persistence
-        let allSessions = PersistenceManager.shared.loadSessions()
+        let allSessions = PersistenceManager.shared.loadSessions(from: context)
 
         // Calculate date 7 days ago
         let calendar = Calendar.current
@@ -707,7 +721,7 @@ public class SessionManager {
     // MARK: - Persistence
 
     private func persistSession() {
-        guard var session = currentSession else { return }
+        guard let session = currentSession, let context = modelContext else { return }
 
         // Update resume state
         session.currentExerciseIndex = currentExerciseIndex
@@ -721,19 +735,13 @@ public class SessionManager {
             session.isActive = false
         }
 
-        currentSession = session
-
-        // Save current session
-        PersistenceManager.shared.saveCurrentSession(session)
-
-        // Add to history
-        var sessions = PersistenceManager.shared.loadSessions()
-        if let index = sessions.firstIndex(where: { $0.id == session.id }) {
-            sessions[index] = session
-        } else {
-            sessions.append(session)
+        // Save to SwiftData
+        do {
+            try context.save()
+            AppLogger.session.debug("Session persisted to SwiftData")
+        } catch {
+            AppLogger.session.error("Failed to persist session: \(error.localizedDescription)")
         }
-        PersistenceManager.shared.saveSessions(sessions)
     }
 
     private func persistExerciseStates() {
@@ -741,6 +749,11 @@ public class SessionManager {
     }
 
     private func loadPersistedState() {
+        guard let context = modelContext else {
+            AppLogger.session.warning("ModelContext not available during init, will load state later")
+            return
+        }
+
         AppLogger.session.debug("Loading persisted session state")
 
         // Load exercise states (always needed for progression tracking)
@@ -751,11 +764,11 @@ public class SessionManager {
         AppLogger.session.debug("Using template system, skipping legacy workout plans")
 
         // Load current session if exists
-        if let savedSession = PersistenceManager.shared.loadCurrentSession() {
+        if let savedSession = PersistenceManager.shared.loadCurrentSession(from: context) {
             // Check if session is stale
             if PersistenceManager.shared.isSessionStale(savedSession) {
                 // Clear stale session
-                PersistenceManager.shared.clearCurrentSession()
+                PersistenceManager.shared.clearCurrentSession(in: context)
                 AppLogger.session.info("Cleared stale session")
             } else {
                 // Keep session for potential resume

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 // MARK: - Enums
 
@@ -136,14 +137,15 @@ public struct ExerciseState: Codable, Sendable {
 
 // MARK: - SetLog
 
-public struct SetLog: Codable, Identifiable, Sendable {
-    public let id: UUID
-    public let setIndex: Int
-    public let targetReps: Int
-    public let targetWeight: Double
+@Model
+public final class SetLog {
+    public var id: UUID
+    public var setIndex: Int
+    public var targetReps: Int
+    public var targetWeight: Double
     public var achievedReps: Int
     public var rating: Rating
-    public let actualWeight: Double
+    public var actualWeight: Double
     public var restPlannedSec: Int?
 
     public init(
@@ -169,11 +171,12 @@ public struct SetLog: Codable, Identifiable, Sendable {
 
 // MARK: - ExerciseSessionLog
 
-public struct ExerciseSessionLog: Codable, Identifiable, Sendable {
-    public let id: UUID
-    public let exerciseId: String  // Snake_case exercise ID (e.g., "cable_fly")
-    public let startWeight: Double
-    public var setLogs: [SetLog]
+@Model
+public final class ExerciseSessionLog {
+    public var id: UUID
+    public var exerciseId: String  // Snake_case exercise ID (e.g., "cable_fly")
+    public var startWeight: Double
+    @Relationship(deleteRule: .cascade) public var setLogs: [SetLog]
     public var sessionDecision: SessionDecision?
     public var nextStartWeight: Double?
 
@@ -208,11 +211,12 @@ public struct PreWorkoutFeeling: Codable, Sendable {
 
 // MARK: - Session
 
-public struct Session: Codable, Identifiable, Sendable {
-    public let id: UUID
-    public let date: Date
+@Model
+public final class Session {
+    @Attribute(.unique) public var id: UUID
+    public var date: Date
     public var preWorkoutFeeling: PreWorkoutFeeling?
-    public var exerciseLogs: [ExerciseSessionLog]
+    @Relationship(deleteRule: .cascade) public var exerciseLogs: [ExerciseSessionLog]
     public var stats: SessionStats
     public var synced: Bool
 

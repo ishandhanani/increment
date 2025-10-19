@@ -8,7 +8,8 @@ extension SessionManager {
 
     /// All completed workout sessions
     public var allSessions: [Session] {
-        return PersistenceManager.shared.loadSessions()
+        guard let context = modelContext else { return [] }
+        return PersistenceManager.shared.loadSessions(from: context)
     }
 
     // MARK: - Overview Statistics

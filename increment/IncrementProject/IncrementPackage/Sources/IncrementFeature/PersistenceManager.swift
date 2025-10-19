@@ -1,7 +1,8 @@
 import Foundation
+import SwiftData
 import OSLog
 
-/// Manages local persistence for sessions, exercise states, and profiles
+/// Manages local persistence for sessions (SwiftData) and simple settings (UserDefaults)
 @MainActor
 class PersistenceManager {
     static let shared = PersistenceManager()
@@ -11,12 +12,9 @@ class PersistenceManager {
     private let decoder = JSONDecoder()
     private let logger = Logger(subsystem: "com.increment", category: "PersistenceManager")
 
-    // Keys
+    // Keys for UserDefaults (simple settings only)
     private enum Keys {
-        static let sessions = "increment.sessions"
         static let exerciseStates = "increment.exerciseStates"
-        static let exerciseProfiles = "increment.exerciseProfiles"
-        static let currentSession = "increment.currentSession"
     }
 
     enum PersistenceError: Error {
@@ -41,66 +39,46 @@ class PersistenceManager {
         decoder.dateDecodingStrategy = .iso8601
     }
 
-    // MARK: - Sessions
+    // MARK: - Sessions (SwiftData)
 
-    func saveSessions(_ sessions: [Session]) {
+    func saveSession(_ session: Session, in context: ModelContext) {
+        context.insert(session)
         do {
-            let data = try encoder.encode(sessions)
-            userDefaults.set(data, forKey: Keys.sessions)
-            logger.debug("Successfully saved \(sessions.count) sessions")
+            try context.save()
+            logger.debug("Successfully saved session to SwiftData")
         } catch {
-            let persistenceError = PersistenceError.encodingFailed(Keys.sessions, error)
-            logger.error("\(persistenceError.localizedDescription)")
+            logger.error("Failed to save session: \(error.localizedDescription)")
         }
     }
 
-    func loadSessions() -> [Session] {
-        guard let data = userDefaults.data(forKey: Keys.sessions) else {
-            logger.debug("No sessions data found")
-            return []
-        }
-
+    func loadSessions(from context: ModelContext) -> [Session] {
+        let descriptor = FetchDescriptor<Session>(sortBy: [SortDescriptor(\.date, order: .reverse)])
         do {
-            let sessions = try decoder.decode([Session].self, from: data)
-            logger.debug("Successfully loaded \(sessions.count) sessions")
+            let sessions = try context.fetch(descriptor)
+            logger.debug("Successfully loaded \(sessions.count) sessions from SwiftData")
             return sessions
         } catch {
-            let persistenceError = PersistenceError.decodingFailed(Keys.sessions, error)
-            logger.error("\(persistenceError.localizedDescription)")
+            logger.error("Failed to load sessions: \(error.localizedDescription)")
             return []
         }
     }
 
-    func saveCurrentSession(_ session: Session?) {
-        guard let session = session else {
-            userDefaults.removeObject(forKey: Keys.currentSession)
-            logger.debug("Removed current session")
-            return
-        }
-
+    func loadCurrentSession(from context: ModelContext) -> Session? {
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive == true },
+            sortBy: [SortDescriptor(\.lastUpdated, order: .reverse)]
+        )
         do {
-            let data = try encoder.encode(session)
-            userDefaults.set(data, forKey: Keys.currentSession)
-            logger.debug("Successfully saved current session")
+            let sessions = try context.fetch(descriptor)
+            if let currentSession = sessions.first {
+                logger.debug("Successfully loaded current session from SwiftData")
+                return currentSession
+            } else {
+                logger.debug("No active session found")
+                return nil
+            }
         } catch {
-            let persistenceError = PersistenceError.encodingFailed(Keys.currentSession, error)
-            logger.error("\(persistenceError.localizedDescription)")
-        }
-    }
-
-    func loadCurrentSession() -> Session? {
-        guard let data = userDefaults.data(forKey: Keys.currentSession) else {
-            logger.debug("No current session data found")
-            return nil
-        }
-
-        do {
-            let session = try decoder.decode(Session.self, from: data)
-            logger.debug("Successfully loaded current session")
-            return session
-        } catch {
-            let persistenceError = PersistenceError.decodingFailed(Keys.currentSession, error)
-            logger.error("\(persistenceError.localizedDescription)")
+            logger.error("Failed to load current session: \(error.localizedDescription)")
             return nil
         }
     }
@@ -110,9 +88,20 @@ class PersistenceManager {
         return Date().timeIntervalSince(session.lastUpdated) > threshold
     }
 
-    func clearCurrentSession() {
-        userDefaults.removeObject(forKey: Keys.currentSession)
-        logger.debug("Cleared current session")
+    func clearCurrentSession(in context: ModelContext) {
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive == true }
+        )
+        do {
+            let sessions = try context.fetch(descriptor)
+            for session in sessions {
+                session.isActive = false
+            }
+            try context.save()
+            logger.debug("Cleared current session")
+        } catch {
+            logger.error("Failed to clear current session: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Exercise States
@@ -145,60 +134,21 @@ class PersistenceManager {
         }
     }
 
-    // MARK: - Exercise Profiles
-
-    func saveExerciseProfiles(_ profiles: [UUID: ExerciseProfile]) {
-        do {
-            let data = try encoder.encode(profiles)
-            userDefaults.set(data, forKey: Keys.exerciseProfiles)
-            logger.debug("Successfully saved \(profiles.count) exercise profiles")
-        } catch {
-            let persistenceError = PersistenceError.encodingFailed(Keys.exerciseProfiles, error)
-            logger.error("\(persistenceError.localizedDescription)")
-        }
-    }
-
-    func loadExerciseProfiles() -> [UUID: ExerciseProfile] {
-        guard let data = userDefaults.data(forKey: Keys.exerciseProfiles) else {
-            logger.debug("No exercise profiles data found")
-            return [:]
-        }
-
-        do {
-            let profiles = try decoder.decode([UUID: ExerciseProfile].self, from: data)
-            logger.debug("Successfully loaded \(profiles.count) exercise profiles")
-            return profiles
-        } catch {
-            let persistenceError = PersistenceError.decodingFailed(Keys.exerciseProfiles, error)
-            logger.error("\(persistenceError.localizedDescription)")
-            return [:]
-        }
-    }
-
     // MARK: - Utilities
 
-    func clearAll() {
-        userDefaults.removeObject(forKey: Keys.sessions)
-        userDefaults.removeObject(forKey: Keys.exerciseStates)
-        userDefaults.removeObject(forKey: Keys.exerciseProfiles)
-        userDefaults.removeObject(forKey: Keys.currentSession)
-        userDefaults.synchronize() // Force write to disk
-    }
-
-    func exportData() -> [String: Any] {
-        let sessions = loadSessions().compactMap { session -> Data? in
-            do {
-                return try encoder.encode(session)
-            } catch {
-                logger.error("Failed to encode session during export: \(error.localizedDescription)")
-                return nil
-            }
+    func clearAll(context: ModelContext) {
+        // Clear SwiftData
+        do {
+            try context.delete(model: Session.self)
+            try context.save()
+            logger.debug("Cleared all SwiftData")
+        } catch {
+            logger.error("Failed to clear SwiftData: \(error.localizedDescription)")
         }
 
-        return [
-            "sessions": sessions,
-            "exerciseStates": loadExerciseStates(),
-            "exerciseProfiles": loadExerciseProfiles()
-        ]
+        // Clear UserDefaults (keep migration flag)
+        userDefaults.removeObject(forKey: Keys.exerciseStates)
+        userDefaults.synchronize()
+        logger.debug("Cleared UserDefaults settings")
     }
 }
