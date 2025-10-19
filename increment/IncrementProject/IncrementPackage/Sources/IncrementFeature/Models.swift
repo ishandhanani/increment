@@ -15,6 +15,54 @@ public enum ExercisePriority: String, Codable, Sendable {
     case accessory
 }
 
+// MARK: - Workout System Enums
+
+public enum LiftCategory: String, Codable, Sendable, CaseIterable {
+    case push
+    case pull
+    case legs
+    case cardio
+
+    /// Returns the next workout type in the cycle
+    public var next: LiftCategory {
+        let all = LiftCategory.allCases
+        guard let currentIndex = all.firstIndex(of: self) else { return .push }
+        let nextIndex = (currentIndex + 1) % all.count
+        return all[nextIndex]
+    }
+}
+
+public enum Equipment: String, Codable, Sendable {
+    case barbell
+    case dumbbell
+    case cable
+    case machine
+    case bodyweight
+    case cardioMachine
+}
+
+public enum MuscleGroup: String, Codable, Sendable {
+    // Push
+    case chest
+    case shoulders
+    case triceps
+    // Pull
+    case back
+    case biceps
+    // Legs
+    case quads
+    case hamstrings
+    case glutes
+    case calves
+    // Core
+    case core
+}
+
+public enum LiftPriority: String, Codable, Sendable {
+    case core       // Main focus lifts
+    case accessory  // Supporting/assistance work
+}
+
 public enum Rating: String, Codable, Sendable, CaseIterable {
     case fail = "FAIL"
     case holyShit = "HOLY_SHIT"
@@ -228,6 +276,162 @@ public struct WorkoutPlan: Codable, Identifiable, Sendable {
         self.name = name
         self.order = order
     }
+}
+
+// MARK: - Workout System Models
+
+/// STEEL configuration for a specific lift
+public struct SteelConfig: Codable, Sendable {
+    public let repRange: ClosedRange<Int>      // e.g., 8...12
+    public let baseIncrement: Double           // Total load step
+    public let rounding: Double                // Round to nearest X
+    public let microAdjustStep: Double?        // Optional micro-loading
+    public let weeklyCapPct: Double            // 5-10%
+    public let plateOptions: [Double]?         // For barbells: [45, 25, 10, 5, 2.5]
+    public let warmupRule: String              // "ramped_2" etc.
+
+    public init(
+        repRange: ClosedRange<Int>,
+        baseIncrement: Double,
+        rounding: Double,
+        microAdjustStep: Double? = nil,
+        weeklyCapPct: Double,
+        plateOptions: [Double]? = nil,
+        warmupRule: String = "ramped_2"
+    ) {
+        self.repRange = repRange
+        self.baseIncrement = baseIncrement
+        self.rounding = rounding
+        self.microAdjustStep = microAdjustStep
+        self.weeklyCapPct = weeklyCapPct
+        self.plateOptions = plateOptions
+        self.warmupRule = warmupRule
+    }
+}
+
+/// A lift/exercise definition (no UUID - identified by name)
+public struct Lift: Codable, Hashable, Sendable {
+    public let name: String              // e.g., "Bench Press", "Squat"
+    public let category: LiftCategory
+    public let equipment: Equipment
+    public let muscleGroups: [MuscleGroup]
+
+    // STEEL Configuration (per lift)
+    public let steelConfig: SteelConfig
+
+    // Optional metadata
+    public let instructions: String?
+    public let videoURL: URL?
+
+    public init(
+        name: String,
+        category: LiftCategory,
+        equipment: Equipment,
+        muscleGroups: [MuscleGroup],
+        steelConfig: SteelConfig,
+        instructions: String? = nil,
+        videoURL: URL? = nil
+    ) {
+        self.name = name
+        self.category = category
+        self.equipment = equipment
+        self.muscleGroups = muscleGroups
+        self.steelConfig = steelConfig
+        self.instructions = instructions
+        self.videoURL = videoURL
+    }
+
+    // Hashable conformance based on name (unique identifier)
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+    }
+
+    public static func == (lhs: Lift, rhs: Lift) -> Bool {
+        lhs.name == rhs.name
+    }
+}
+
+/// Configuration for an exercise within a workout template
+public struct WorkoutExercise: Codable, Sendable {
+    public let lift: Lift                // The actual lift with STEEL config
+    public let order: Int                // Exercise order in workout
+    public let priority: LiftPriority    // Core or Accessory
+    public let targetSets: Int           // e.g., 3-4 sets
+    public let restTime: TimeInterval    // Rest between sets in seconds
+    public let notes: String?            // Optional notes
+
+    public init(
+        lift: Lift,
+        order: Int,
+        priority: LiftPriority,
+        targetSets: Int,
+        restTime: TimeInterval,
+        notes: String? = nil
+    ) {
+        self.lift = lift
+        self.order = order
+        self.priority = priority
+        self.targetSets = targetSets
+        self.restTime = restTime
+        self.notes = notes
+    }
+}
+
+/// A workout template (e.g., "Push Day", "Pull Day")
+public struct WorkoutTemplate: Codable, Identifiable, Sendable {
+    public let id: UUID
+    public let name: String              // "Push Day", "Pull Day", etc.
+    public let workoutType: LiftCategory
+    public let exercises: [WorkoutExercise]
+    public let estimatedDuration: TimeInterval?
+
+    public init(
+        id: UUID = UUID(),
+        name: String,
+        workoutType: LiftCategory,
+        exercises: [WorkoutExercise],
+        estimatedDuration: TimeInterval? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.workoutType = workoutType
+        self.exercises = exercises
+        self.estimatedDuration = estimatedDuration
+    }
+}
+
+/// Manages the 4-day workout cycle (Push -> Pull -> Legs -> Cardio)
+public struct WorkoutCycle: Codable, Sendable {
+    public let templates: [WorkoutTemplate]  // [Push, Pull, Legs, Cardio]
+    public var lastCompletedType: LiftCategory?
+
+    public init(templates: [WorkoutTemplate], lastCompletedType: LiftCategory? = nil) {
+        self.templates = templates
+        self.lastCompletedType = lastCompletedType
+    }
+
+    /// Returns the next workout in the cycle
+    public func nextWorkout() -> WorkoutTemplate? {
+        guard let last = lastCompletedType,
+              let nextType = LiftCategory.allCases.first(where: { $0 == last })?.next else {
+            // First workout, start with push
+            return templates.first { $0.workoutType == .push }
+        }
+
+        return templates.first { $0.workoutType == nextType }
+    }
+
+    /// Updates the cycle after completing a workout
+    public mutating func completeWorkout(_ type: LiftCategory) {
+        lastCompletedType = type
+    }
+}
+
+/// Session status enumeration
+public enum SessionStatus: String, Codable, Sendable {
+    case inProgress
+    case completed
+    case abandoned
 }
 
 // MARK: - Codable Extensions for ClosedRange
