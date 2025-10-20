@@ -214,16 +214,52 @@ class DatabaseManager: @unchecked Sendable {
 
     func clearCurrentSession() async throws {
         try await dbQueue.write { db in
-            try db.execute(sql: "UPDATE sessions SET isActive = 0 WHERE isActive = 1")
+            // First get the active session ID to delete related data
+            let activeSessionIds = try String.fetchAll(db, sql: "SELECT id FROM sessions WHERE isActive = 1")
+
+            // Delete related data for each active session
+            for sessionId in activeSessionIds {
+                // Delete set logs first (they reference exercise logs)
+                try db.execute(sql: """
+                    DELETE FROM set_logs
+                    WHERE exerciseLogId IN (
+                        SELECT id FROM exercise_logs WHERE sessionId = ?
+                    )
+                """, arguments: [sessionId])
+
+                // Delete exercise logs (they reference sessions)
+                try db.execute(sql: "DELETE FROM exercise_logs WHERE sessionId = ?", arguments: [sessionId])
+
+                // Finally delete the session
+                try db.execute(sql: "DELETE FROM sessions WHERE id = ?", arguments: [sessionId])
+            }
         }
-        logger.debug("Cleared current session")
+        logger.debug("Deleted current session and all related data")
     }
 
     func clearCurrentSessionSync() throws {
         try dbQueue.write { db in
-            try db.execute(sql: "UPDATE sessions SET isActive = 0 WHERE isActive = 1")
+            // First get the active session ID to delete related data
+            let activeSessionIds = try String.fetchAll(db, sql: "SELECT id FROM sessions WHERE isActive = 1")
+
+            // Delete related data for each active session
+            for sessionId in activeSessionIds {
+                // Delete set logs first (they reference exercise logs)
+                try db.execute(sql: """
+                    DELETE FROM set_logs
+                    WHERE exerciseLogId IN (
+                        SELECT id FROM exercise_logs WHERE sessionId = ?
+                    )
+                """, arguments: [sessionId])
+
+                // Delete exercise logs (they reference sessions)
+                try db.execute(sql: "DELETE FROM exercise_logs WHERE sessionId = ?", arguments: [sessionId])
+
+                // Finally delete the session
+                try db.execute(sql: "DELETE FROM sessions WHERE id = ?", arguments: [sessionId])
+            }
         }
-        logger.debug("Cleared current session (sync)")
+        logger.debug("Deleted current session and all related data (sync)")
     }
 
     // MARK: - Exercise States
