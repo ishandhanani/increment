@@ -60,16 +60,33 @@ struct WorkoutOverviewView: View {
                                             .font(.system(.body, design: .monospaced))
 
                                         HStack(spacing: 12) {
-                                            Text("\(exercise.targetSets) sets")
-                                                .font(.system(.caption, design: .monospaced))
-                                                .opacity(0.6)
+                                            if let steelConfig = exercise.lift.steelConfig {
+                                                Text("\(exercise.targetSets) sets")
+                                                    .font(.system(.caption, design: .monospaced))
+                                                    .opacity(0.6)
 
-                                            Text("•")
-                                                .opacity(0.4)
+                                                Text("•")
+                                                    .opacity(0.4)
 
-                                            Text("\(exercise.lift.steelConfig.repRange.lowerBound)-\(exercise.lift.steelConfig.repRange.upperBound) reps")
-                                                .font(.system(.caption, design: .monospaced))
-                                                .opacity(0.6)
+                                                Text("\(steelConfig.repRange.lowerBound)-\(steelConfig.repRange.upperBound) reps")
+                                                    .font(.system(.caption, design: .monospaced))
+                                                    .opacity(0.6)
+                                            } else if let cardioConfig = exercise.lift.cardioConfig {
+                                                switch cardioConfig.type {
+                                                case .running:
+                                                    Text("\(String(format: "%.1f", cardioConfig.targetValue)) mi @ \(String(format: "%.1f", cardioConfig.targetIntensity)) mph")
+                                                        .font(.system(.caption, design: .monospaced))
+                                                        .opacity(0.6)
+                                                case .rowing:
+                                                    Text("\(Int(cardioConfig.targetValue)) min @ \(String(format: "%.1f", cardioConfig.targetIntensity))/500m")
+                                                        .font(.system(.caption, design: .monospaced))
+                                                        .opacity(0.6)
+                                                case .biking:
+                                                    Text("\(Int(cardioConfig.targetValue)) min")
+                                                        .font(.system(.caption, design: .monospaced))
+                                                        .opacity(0.6)
+                                                }
+                                            }
 
                                             if exercise.priority == .core {
                                                 Text("•")
