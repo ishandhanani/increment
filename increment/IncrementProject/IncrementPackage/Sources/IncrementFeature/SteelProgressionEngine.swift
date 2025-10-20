@@ -25,7 +25,7 @@ public class SteelProgressionEngine {
     ///   - category: Exercise category (cardio, etc.)
     ///   - priority: Exercise priority (.core or .accessory)
     ///   - exerciseIndex: Position in workout (0 = first exercise, 1 = second, etc.)
-    ///   - plateOptions: Available plates for proper warmup progression (barbells only)
+    ///   - config: STEEL configuration for the exercise
     /// - Returns: Warmup prescription with sets or indication that no warmup needed
     public static func prescribeWarmup(
         equipment: Equipment,
@@ -33,119 +33,16 @@ public class SteelProgressionEngine {
         category: LiftCategory,
         priority: LiftPriority,
         exerciseIndex: Int,
-        plateOptions: [Double]? = nil
+        config: SteelConfig
     ) -> WarmupPrescription {
-        // Skip warmups for cardio
-        if equipment == .cardioMachine || category == .cardio {
-            return WarmupPrescription(sets: [], needsWarmup: false)
-        }
-
-        // Skip warmups for bodyweight exercises
-        if equipment == .bodyweight {
-            return WarmupPrescription(sets: [], needsWarmup: false)
-        }
-
-        // Accessory exercises: No warmup needed (already warmed up from core lifts)
-        if priority == .accessory {
-            return WarmupPrescription(sets: [], needsWarmup: false)
-        }
-
-        // Generate warmup sets based on exercise priority and position
-        var sets: [WarmupPrescription.WarmupSet] = []
-
-        if priority == .core && exerciseIndex == 0 {
-            // First core exercise: 3 warmup sets (~15 lb increments)
-            sets = generateCoreWarmup(
-                workingWeight: workingWeight,
-                warmupSets: 3,
-                plateOptions: plateOptions
-            )
-        } else if priority == .core && exerciseIndex == 1 {
-            // Second core exercise: 1 warmup set (15 lbs less than working)
-            let warmupWeight = max(45.0, workingWeight - 15.0)
-            sets = [
-                WarmupPrescription.WarmupSet(weight: warmupWeight, reps: 5, stepNumber: 0)
-            ]
-        } else {
-            // Fallback for any other core exercises (3rd+): 1 warmup
-            let warmupWeight = max(45.0, workingWeight - 15.0)
-            sets = [
-                WarmupPrescription.WarmupSet(weight: warmupWeight, reps: 5, stepNumber: 0)
-            ]
-        }
-
-        return WarmupPrescription(sets: sets, needsWarmup: !sets.isEmpty)
-    }
-
-    /// Generates core exercise warmup using ~15 lb increments
-    /// Strategy: Work backwards from working weight in ~15 lb decrements
-    /// Example for 135 lb: 105, 90, 75 → reversed to 75×5, 90×5, 105×3, 120×2
-    private static func generateCoreWarmup(
-        workingWeight: Double,
-        warmupSets: Int,
-        plateOptions: [Double]?
-    ) -> [WarmupPrescription.WarmupSet] {
-        let barWeight = 45.0
-        let increment = 15.0  // ~15 lb increments between warmup sets
-        var warmupWeights: [Double] = []
-
-        // Generate warmup weights by working backwards from working weight
-        var currentWeight = workingWeight
-        for _ in 0..<warmupSets {
-            currentWeight -= increment
-            if currentWeight < barWeight {
-                currentWeight = barWeight
-            }
-            warmupWeights.insert(currentWeight, at: 0)  // Insert at beginning to maintain ascending order
-        }
-
-        // Remove duplicates (in case we hit bar weight multiple times)
-        warmupWeights = Array(Set(warmupWeights)).sorted()
-
-        // Round weights to achievable values using plate math (if plates provided)
-        if let plates = plateOptions {
-            warmupWeights = warmupWeights.map { weight in
-                roundToPlates(weight, plates: plates, barWeight: barWeight)
-            }
-            // Remove duplicates again after rounding
-            warmupWeights = Array(Set(warmupWeights)).sorted()
-        } else {
-            // Round to nearest 5 lbs for realistic gym weights
-            warmupWeights = warmupWeights.map { weight in
-                (weight / 5.0).rounded() * 5.0
-            }
-            warmupWeights = Array(Set(warmupWeights)).sorted()
-        }
-
-        // Generate warmup sets with decreasing reps as weight increases
-        var sets: [WarmupPrescription.WarmupSet] = []
-        for (index, weight) in warmupWeights.enumerated() {
-            let percentOfWorkingWeight = weight / workingWeight
-            let reps: Int
-
-            if percentOfWorkingWeight < 0.6 {
-                reps = 5  // Light warmup: 5 reps
-            } else if percentOfWorkingWeight < 0.8 {
-                reps = 3  // Moderate warmup: 3 reps
-            } else {
-                reps = 2  // Heavy warmup: 2 reps (close to working weight)
-            }
-
-            sets.append(WarmupPrescription.WarmupSet(
-                weight: weight,
-                reps: reps,
-                stepNumber: index
-            ))
-        }
-
-        // Ensure we got at least one warmup set
-        if sets.isEmpty {
-            // Fallback: one warmup at 85% of working weight
-            let warmupWeight = max(barWeight, workingWeight - 15.0)
-            sets.append(WarmupPrescription.WarmupSet(weight: warmupWeight, reps: 5, stepNumber: 0))
-        }
-
-        return sets
+        // Delegate to equipment-specific strategy
+        let strategy = SteelProgressionStrategyFactory.strategy(for: equipment)
+        return strategy.generateWarmup(
+            workingWeight: workingWeight,
+            priority: priority,
+            exerciseIndex: exerciseIndex,
+            config: config
+        )
     }
 
     // MARK: - Within-Session Micro-Adjust (4B)

@@ -425,7 +425,7 @@ public class SessionManager {
                 category: exercise.lift.category,
                 priority: exercise.priority,
                 exerciseIndex: exerciseIndex,
-                plateOptions: exercise.lift.steelConfig.plateOptions
+                config: exercise.lift.steelConfig
             )
 
             if warmupPrescription.needsWarmup {
@@ -471,7 +471,7 @@ public class SessionManager {
             category: exercise.lift.category,
             priority: exercise.priority,
             exerciseIndex: exerciseIndex,
-            plateOptions: exercise.lift.steelConfig.plateOptions
+            config: exercise.lift.steelConfig
         )
 
         if step < warmupPrescription.sets.count - 1 {
@@ -499,7 +499,7 @@ public class SessionManager {
             category: exercise.lift.category,
             priority: exercise.priority,
             exerciseIndex: exerciseIndex,
-            plateOptions: exercise.lift.steelConfig.plateOptions
+            config: exercise.lift.steelConfig
         )
 
         guard step < warmupPrescription.sets.count else { return nil }
