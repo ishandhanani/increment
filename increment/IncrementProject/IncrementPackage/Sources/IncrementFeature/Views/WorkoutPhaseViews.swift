@@ -68,14 +68,7 @@ struct WarmupView: View {
                     exerciseId: profile.name,
                     setInfo: "Warmup",
                     goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
-                    weight: exerciseLog.startWeight,
-                    plates: profile.plateOptions.map { plateOptions in
-                        SteelProgressionEngine.computePlateBreakdown(
-                            exerciseLog.startWeight,
-                            plates: plateOptions,
-                            barWeight: 45.0
-                        )
-                    }
+                    weight: exerciseLog.startWeight
                 )
             }
 
@@ -112,7 +105,7 @@ struct WarmupView: View {
 @MainActor
 struct WorkingSetView: View {
     @Environment(SessionManager.self) private var sessionManager
-    @State private var reps: Int = 5
+    @State private var reps: Int = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -124,15 +117,18 @@ struct WorkingSetView: View {
                     exerciseId: profile.name,
                     setInfo: "Set \(sessionManager.currentSetIndex + 1)/\(profile.sets)",
                     goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
-                    weight: prescription.weight,
-                    plates: profile.plateOptions.map { plateOptions in
-                        SteelProgressionEngine.computePlateBreakdown(
-                            prescription.weight,
-                            plates: plateOptions,
-                            barWeight: 45.0
-                        )
-                    }
+                    weight: prescription.weight
                 )
+                .onAppear {
+                    // Initialize reps to the prescribed target
+                    if reps == 0 {
+                        reps = prescription.reps
+                    }
+                }
+                .onChange(of: sessionManager.currentSetIndex) { _, _ in
+                    // Reset to prescribed reps when advancing to next set
+                    reps = prescription.reps
+                }
 
                 // Content panel
                 VStack(spacing: 24) {
