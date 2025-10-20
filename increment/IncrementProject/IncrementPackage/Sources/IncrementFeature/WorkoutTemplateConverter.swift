@@ -4,7 +4,7 @@ import Foundation
 struct WorkoutTemplateConverter {
 
     /// Converts a Lift to an ExerciseProfile (maintaining STEEL compatibility)
-    /// Returns nil for cardio exercises (which use CardioConfig instead)
+    /// Returns nil for cardio exercises
     static func toExerciseProfile(from lift: Lift, sets: Int, restSec: Int) -> ExerciseProfile? {
         // Skip cardio exercises - they don't use ExerciseProfile
         guard let steelConfig = lift.steelConfig else {
@@ -55,7 +55,7 @@ struct WorkoutTemplateConverter {
 
     /// Converts a WorkoutTemplate to dictionary of ExerciseProfiles
     /// Returns: [String: ExerciseProfile] keyed by exercise ID
-    /// Note: Skips cardio exercises (which use CardioConfig instead)
+    /// Note: Skips cardio exercises
     static func toExerciseProfiles(from template: WorkoutTemplate) -> [String: ExerciseProfile] {
         var profiles: [String: ExerciseProfile] = [:]
 
