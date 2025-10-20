@@ -1,4 +1,6 @@
+#if os(iOS)
 @preconcurrency import ActivityKit
+#endif
 import Foundation
 import OSLog
 
@@ -7,7 +9,9 @@ import OSLog
 public class LiveActivityManager {
     public static let shared = LiveActivityManager()
 
+    #if os(iOS)
     private var currentActivity: Activity<WorkoutLiveActivityAttributes>?
+    #endif
 
     private init() {}
 
@@ -22,6 +26,7 @@ public class LiveActivityManager {
         exercisesCompleted: Int,
         totalExercises: Int
     ) async {
+        #if os(iOS)
         // Check notification authorization before starting activity
         let notificationManager = NotificationManager.shared
         let isAuthorized = await notificationManager.isAuthorized()
@@ -58,6 +63,7 @@ public class LiveActivityManager {
         } catch {
             AppLogger.liveActivity.error("Failed to start Live Activity: \(error.localizedDescription, privacy: .public)")
         }
+        #endif
     }
 
     /// Update the Live Activity with new state
@@ -72,6 +78,7 @@ public class LiveActivityManager {
         exercisesCompleted: Int,
         totalExercises: Int
     ) async {
+        #if os(iOS)
         guard let activity = currentActivity else {
             AppLogger.liveActivity.debug("No active Live Activity to update")
             return
@@ -96,6 +103,7 @@ public class LiveActivityManager {
             )
         )
         AppLogger.liveActivity.debug("Live Activity updated")
+        #endif
     }
 
     /// End the Live Activity with meaningful final state
@@ -104,6 +112,7 @@ public class LiveActivityManager {
         completedExercises: Int = 0,
         totalExercises: Int = 0
     ) async {
+        #if os(iOS)
         guard let activity = currentActivity else { return }
 
         let finalState = WorkoutLiveActivityAttributes.ContentState(
@@ -128,10 +137,15 @@ public class LiveActivityManager {
 
         currentActivity = nil
         AppLogger.liveActivity.notice("Live Activity ended")
+        #endif
     }
 
     /// Check if there's an active Live Activity
     public var hasActiveActivity: Bool {
-        currentActivity != nil
+        #if os(iOS)
+        return currentActivity != nil
+        #else
+        return false
+        #endif
     }
 }

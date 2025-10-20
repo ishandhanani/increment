@@ -51,10 +51,17 @@ public struct ContentView: View {
             }
         }
         .font(.system(.body, design: .monospaced))
+        #if os(iOS)
         .fullScreenCover(isPresented: $showingCalibration) {
             CalibrationView(isPresented: $showingCalibration)
                 .environment(sessionManager)
         }
+        #else
+        .sheet(isPresented: $showingCalibration) {
+            CalibrationView(isPresented: $showingCalibration)
+                .environment(sessionManager)
+        }
+        #endif
         .onAppear {
             checkCalibrationStatus()
         }
