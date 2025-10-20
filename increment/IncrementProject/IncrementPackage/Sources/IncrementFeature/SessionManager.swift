@@ -220,6 +220,39 @@ public class SessionManager {
         AppLogger.session.info("Session discarded, reset to intro")
     }
 
+    /// Reset all data and state to fresh app state (used when clearing all data)
+    public func resetToFreshState() {
+        AppLogger.session.notice("Resetting to fresh state")
+
+        // Stop any active timers
+        restTimer?.stop()
+        restTimer = nil
+        cancellables.removeAll()
+
+        // Clear all in-memory state
+        currentSession = nil
+        currentExerciseIndex = 0
+        currentSetIndex = 0
+        sessionState = .intro
+        currentExerciseLog = nil
+        nextPrescription = nil
+        isFirstExercise = true
+
+        // Clear exercise data
+        exerciseProfiles = [:]
+        exerciseStates = [:]
+
+        // Reset workout cycle
+        workoutCycle = nil
+        currentWorkoutTemplate = nil
+        suggestedWorkoutType = .push
+
+        // Reload default state
+        loadDefaultWorkoutCycle()
+
+        AppLogger.session.info("Reset to fresh state complete")
+    }
+
     private func serializeSessionState(_ state: SessionState) -> String {
         switch state {
         case .intro:

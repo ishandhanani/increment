@@ -4,9 +4,11 @@ import SwiftUI
 
 @MainActor
 public struct SettingsView: View {
+    @Environment(SessionManager.self) private var sessionManager
     @Binding var isPresented: Bool
     @State private var showingDiagnostic = false
     @State private var showingCalibration = false
+    @State private var showingClearDataConfirmation = false
 
     public init(isPresented: Binding<Bool>) {
         self._isPresented = isPresented
@@ -62,6 +64,16 @@ public struct SettingsView: View {
                         }
                     }
 
+                    // Data Section
+                    SettingsSection(title: "DATA") {
+                        SettingButton(
+                            title: "Clear All Data",
+                            description: "Reset app to fresh state (cannot be undone)"
+                        ) {
+                            showingClearDataConfirmation = true
+                        }
+                    }
+
                     // About Section
                     SettingsSection(title: "ABOUT") {
                         SettingRow(
@@ -83,6 +95,22 @@ public struct SettingsView: View {
         }
         .fullScreenCover(isPresented: $showingCalibration) {
             CalibrationView(isPresented: $showingCalibration)
+        }
+        .alert("Clear All Data", isPresented: $showingClearDataConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Clear All Data", role: .destructive) {
+                clearAllData()
+            }
+        } message: {
+            Text("This will permanently delete all workout sessions, progress data, and settings. This action cannot be undone.")
+        }
+    }
+
+    private func clearAllData() {
+        Task {
+            await PersistenceManager.shared.clearAll()
+            sessionManager.resetToFreshState()
+            isPresented = false
         }
     }
 }
