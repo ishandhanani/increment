@@ -419,7 +419,8 @@ public class SessionManager {
             let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
                 equipment: exercise.lift.equipment,
                 workingWeight: startWeight,
-                category: exercise.lift.category
+                category: exercise.lift.category,
+                plateOptions: exercise.lift.steelConfig.plateOptions
             )
 
             if warmupPrescription.needsWarmup {
@@ -461,7 +462,8 @@ public class SessionManager {
         let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
             equipment: exercise.lift.equipment,
             workingWeight: exerciseLog.startWeight,
-            category: exercise.lift.category
+            category: exercise.lift.category,
+            plateOptions: exercise.lift.steelConfig.plateOptions
         )
 
         if step < warmupPrescription.sets.count - 1 {
@@ -484,7 +486,8 @@ public class SessionManager {
         let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
             equipment: exercise.lift.equipment,
             workingWeight: exerciseLog.startWeight,
-            category: exercise.lift.category
+            category: exercise.lift.category,
+            plateOptions: exercise.lift.steelConfig.plateOptions
         )
 
         guard step < warmupPrescription.sets.count else { return nil }

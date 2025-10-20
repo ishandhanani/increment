@@ -23,11 +23,13 @@ public class SteelProgressionEngine {
     ///   - equipment: Type of equipment used
     ///   - workingWeight: Starting weight for working sets
     ///   - category: Exercise category (cardio, etc.)
+    ///   - plateOptions: Available plates for proper warmup progression (barbells only)
     /// - Returns: Warmup prescription with sets or indication that no warmup needed
     public static func prescribeWarmup(
         equipment: Equipment,
         workingWeight: Double,
-        category: LiftCategory
+        category: LiftCategory,
+        plateOptions: [Double]? = nil
     ) -> WarmupPrescription {
         // Skip warmups for cardio
         if equipment == .cardioMachine || category == .cardio {
@@ -42,35 +44,129 @@ public class SteelProgressionEngine {
         // Generate warmup sets based on equipment and weight
         var sets: [WarmupPrescription.WarmupSet] = []
 
-        // Heavy barbell (>225 lbs): 3 warmup sets
-        if equipment == .barbell && workingWeight > 225 {
-            sets = [
-                WarmupPrescription.WarmupSet(weight: workingWeight * 0.4, reps: 5, stepNumber: 0),
-                WarmupPrescription.WarmupSet(weight: workingWeight * 0.6, reps: 4, stepNumber: 1),
-                WarmupPrescription.WarmupSet(weight: workingWeight * 0.8, reps: 2, stepNumber: 2)
-            ]
+        // Barbell exercises: Use plate-aware progression
+        if equipment == .barbell {
+            sets = generateBarbellWarmup(workingWeight: workingWeight, plateOptions: plateOptions)
         }
-        // Dumbbell/Machine: 1 lighter warmup
+        // Dumbbell/Machine: 1-2 warmup sets based on working weight
         else if equipment == .dumbbell || equipment == .machine {
-            sets = [
-                WarmupPrescription.WarmupSet(weight: workingWeight * 0.7, reps: 5, stepNumber: 0)
-            ]
+            if workingWeight >= 50 {
+                // Heavier weight: 2 warmups
+                sets = [
+                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.6, reps: 5, stepNumber: 0),
+                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.8, reps: 3, stepNumber: 1)
+                ]
+            } else {
+                // Lighter weight: 1 warmup
+                sets = [
+                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.7, reps: 5, stepNumber: 0)
+                ]
+            }
         }
-        // Standard barbell: 2 warmup sets
-        else if equipment == .barbell {
-            sets = [
-                WarmupPrescription.WarmupSet(weight: workingWeight * 0.5, reps: 5, stepNumber: 0),
-                WarmupPrescription.WarmupSet(weight: workingWeight * 0.7, reps: 3, stepNumber: 1)
-            ]
-        }
-        // Cable: 1 moderate warmup
+        // Cable: 1-2 moderate warmups
         else if equipment == .cable {
-            sets = [
-                WarmupPrescription.WarmupSet(weight: workingWeight * 0.6, reps: 5, stepNumber: 0)
-            ]
+            if workingWeight >= 60 {
+                sets = [
+                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.6, reps: 5, stepNumber: 0),
+                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.8, reps: 3, stepNumber: 1)
+                ]
+            } else {
+                sets = [
+                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.7, reps: 5, stepNumber: 0)
+                ]
+            }
         }
 
         return WarmupPrescription(sets: sets, needsWarmup: !sets.isEmpty)
+    }
+
+    /// Generates optimal barbell warmup progression using real plate combinations
+    /// Follows standard gym plate loading: 45 → 95 → 115 → 135 → 155 → 185 → 205 → 225 → etc.
+    private static func generateBarbellWarmup(
+        workingWeight: Double,
+        plateOptions: [Double]?
+    ) -> [WarmupPrescription.WarmupSet] {
+        let barWeight = 45.0
+        var sets: [WarmupPrescription.WarmupSet] = []
+
+        // For very light working weights (<= 65 lbs), just use the bar
+        if workingWeight <= 65 {
+            sets.append(WarmupPrescription.WarmupSet(weight: barWeight, reps: 5, stepNumber: 0))
+            return sets
+        }
+
+        // Standard plate progression (commonly loaded weights)
+        // These represent typical gym warmup patterns
+        let standardWeights: [Double] = [45, 95, 115, 135, 155, 185, 205, 225, 275, 315, 365, 405, 455]
+
+        // Find warmup weights that are below working weight
+        var warmupWeights: [Double] = []
+
+        for weight in standardWeights {
+            if weight < workingWeight {
+                warmupWeights.append(weight)
+            } else {
+                break
+            }
+        }
+
+        // If working weight doesn't align with standard weights, add a final warmup at ~85-90%
+        let finalWarmupTarget = workingWeight * 0.87 // ~87% of working weight
+        if let lastWarmup = warmupWeights.last, lastWarmup < finalWarmupTarget {
+            // Add one more warmup closer to working weight
+            if let plates = plateOptions {
+                let closerWarmup = roundToPlates(finalWarmupTarget, plates: plates, barWeight: barWeight)
+                if closerWarmup > lastWarmup && closerWarmup < workingWeight {
+                    warmupWeights.append(closerWarmup)
+                }
+            } else {
+                // No plates specified, use percentage-based
+                warmupWeights.append(finalWarmupTarget)
+            }
+        }
+
+        // Determine rep scheme based on weight percentage
+        // Strategy: Start with higher reps (5), decrease as weight increases (3, 2, 1)
+        for (index, weight) in warmupWeights.enumerated() {
+            let reps: Int
+            let percentOfWorkingWeight = weight / workingWeight
+
+            if percentOfWorkingWeight < 0.5 {
+                reps = 5  // Light warmup: 5 reps
+            } else if percentOfWorkingWeight < 0.75 {
+                reps = 3  // Moderate warmup: 3 reps
+            } else if percentOfWorkingWeight < 0.9 {
+                reps = 2  // Heavy warmup: 2 reps
+            } else {
+                reps = 1  // Very heavy warmup: 1 rep
+            }
+
+            sets.append(WarmupPrescription.WarmupSet(
+                weight: weight,
+                reps: reps,
+                stepNumber: index
+            ))
+        }
+
+        // Ensure we have at least 1 warmup set but not more than 5
+        if sets.isEmpty {
+            // Fallback: simple percentage-based warmup
+            sets.append(WarmupPrescription.WarmupSet(weight: workingWeight * 0.7, reps: 5, stepNumber: 0))
+        } else if sets.count > 5 {
+            // Too many warmups - keep only the most relevant ones
+            // Keep first, last, and middle warmups
+            let keep = [0, sets.count / 3, 2 * sets.count / 3, sets.count - 1]
+            sets = keep.enumerated().map { index, originalIndex in
+                let originalSet = sets[originalIndex]
+                return WarmupPrescription.WarmupSet(
+                    weight: originalSet.weight,
+                    reps: originalSet.reps,
+                    stepNumber: index
+                )
+            }
+        }
+
+        return sets
     }
 
     // MARK: - Within-Session Micro-Adjust (4B)
@@ -81,6 +177,7 @@ public class SteelProgressionEngine {
     }
 
     /// Computes next set prescription based on current performance
+    /// Adjusted for real-world training patterns with smarter progression/regression
     public static func microAdjust(
         currentWeight: Double,
         achievedReps: Int,
@@ -96,34 +193,58 @@ public class SteelProgressionEngine {
 
         switch rating {
         case .fail:
-            // Drop by base increment, target min reps
+            // Complete failure - significant weight reduction
+            // Drop by full base increment to ensure recovery
             let nextWeight = round(max(0, currentWeight - baseIncrement), to: rounding)
             return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
 
         case .holyShit:
-            // If below min reps, drop weight; else hold
+            // Struggled badly - conservative approach
             if achievedReps < rMin {
+                // Didn't even hit minimum - drop weight significantly
                 let nextWeight = round(max(0, currentWeight - baseIncrement), to: rounding)
                 return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
-            } else {
-                return MicroAdjustResult(nextWeight: currentWeight, nextReps: clamp(achievedReps, rMin, rMax))
+            } else if achievedReps <= rMin + 1 {
+                // Just barely hit minimum - drop by micro if available
+                if micro > 0 {
+                    let nextWeight = round(max(0, currentWeight - micro), to: rounding)
+                    return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
+                }
             }
+            // Hit reps but it was very hard - maintain weight
+            return MicroAdjustResult(nextWeight: currentWeight, nextReps: clamp(achievedReps, rMin, rMax))
 
         case .hard:
-            // If below min and micro exists, drop by micro; else hold
-            if achievedReps < rMin && micro > 0 {
-                let nextWeight = round(max(0, currentWeight - micro), to: rounding)
+            // Challenging but doable - maintain or small adjustment
+            if achievedReps < rMin {
+                // Didn't hit minimum - drop by micro if available, else base
+                let dropAmount = micro > 0 ? micro : baseIncrement
+                let nextWeight = round(max(0, currentWeight - dropAmount), to: rounding)
                 return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
+            } else if achievedReps == rMin {
+                // Hit exactly minimum - maintain weight, stay at minimum reps
+                return MicroAdjustResult(nextWeight: currentWeight, nextReps: rMin)
             } else {
+                // Hit above minimum - maintain weight, aim for same reps achieved
                 return MicroAdjustResult(nextWeight: currentWeight, nextReps: clamp(achievedReps, rMin, rMax))
             }
 
         case .easy:
-            // If at/above max and micro exists, add micro; else hold
-            if achievedReps >= rMax && micro > 0 {
-                let nextWeight = round(currentWeight + micro, to: rounding)
-                return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMax)
+            // Felt easy - add weight if hitting upper range
+            if achievedReps >= rMax {
+                // Hit top of range and felt easy - add micro load if available
+                if micro > 0 {
+                    let nextWeight = round(currentWeight + micro, to: rounding)
+                    return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMax)
+                } else {
+                    // No micro available - maintain weight, aim for more reps next time
+                    return MicroAdjustResult(nextWeight: currentWeight, nextReps: rMax)
+                }
+            } else if achievedReps >= rMax - 1 {
+                // Close to top - maintain weight, push for max reps
+                return MicroAdjustResult(nextWeight: currentWeight, nextReps: rMax)
             } else {
+                // Mid-range - maintain weight, aim for achieved reps
                 return MicroAdjustResult(nextWeight: currentWeight, nextReps: clamp(achievedReps, rMin, rMax))
             }
         }
