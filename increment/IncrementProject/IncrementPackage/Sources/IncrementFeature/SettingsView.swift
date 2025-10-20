@@ -78,21 +78,12 @@ public struct SettingsView: View {
                 .padding(24)
             }
         }
-        #if os(iOS)
         .fullScreenCover(isPresented: $showingDiagnostic) {
             DiagnosticView(isPresented: $showingDiagnostic)
         }
         .fullScreenCover(isPresented: $showingCalibration) {
             CalibrationView(isPresented: $showingCalibration)
         }
-        #else
-        .sheet(isPresented: $showingDiagnostic) {
-            DiagnosticView(isPresented: $showingDiagnostic)
-        }
-        .sheet(isPresented: $showingCalibration) {
-            CalibrationView(isPresented: $showingCalibration)
-        }
-        #endif
     }
 }
 

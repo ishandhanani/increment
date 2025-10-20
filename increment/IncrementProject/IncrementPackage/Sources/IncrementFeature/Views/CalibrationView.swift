@@ -179,9 +179,7 @@ private struct CalibrationInputField: View {
                     .font(.system(.title2, design: .monospaced))
                     .fontWeight(.bold)
                     .foregroundColor(.white)
-                    #if os(iOS)
                     .keyboardType(.decimalPad)
-                    #endif
                     .placeholder(when: value.isEmpty) {
                         Text(placeholder)
                             .font(.system(.title2, design: .monospaced))
