@@ -7,7 +7,6 @@ struct ExerciseHeader: View {
     let setInfo: String
     let goal: String
     let weight: Double
-    let plates: [Double]?
 
     var body: some View {
         HStack(alignment: .top) {
@@ -22,11 +21,6 @@ struct ExerciseHeader: View {
                 Text("Set: \(setInfo)")
                 Text("Goal: \(goal)")
                 Text("Weight: \(Int(weight)) lb")
-
-                if let plates = plates {
-                    Text("Plates: \(plates.map { "\(Int($0))" }.joined(separator: " | "))")
-                        .font(.system(.caption, design: .monospaced))
-                }
             }
             .font(.system(.caption, design: .monospaced))
         }

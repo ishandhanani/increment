@@ -44,14 +44,14 @@ public struct VolumeDataPoint: Identifiable, Equatable {
     }
 }
 
-/// Represents volume breakdown by exercise category
+/// Represents volume breakdown by equipment type
 public struct VolumeByCategory: Equatable {
-    public let category: ExerciseCategory
+    public let equipment: Equipment
     public let volume: Double
     public let percentage: Double
 
-    public init(category: ExerciseCategory, volume: Double, percentage: Double) {
-        self.category = category
+    public init(equipment: Equipment, volume: Double, percentage: Double) {
+        self.equipment = equipment
         self.volume = volume
         self.percentage = percentage
     }

@@ -3,47 +3,23 @@ import Foundation
 /// Utilities to convert between new workout models and existing STEEL models
 struct WorkoutTemplateConverter {
 
-    /// Converts a Lift to an ExerciseProfile (maintaining STEEL compatibility)
-    static func toExerciseProfile(from lift: Lift, sets: Int, restSec: Int) -> ExerciseProfile {
-        // Map new Equipment to old ExerciseCategory
-        let category: ExerciseCategory = {
-            switch lift.equipment {
-            case .barbell:
-                return .barbell
-            case .dumbbell:
-                return .dumbbell
-            case .machine:
-                return .machine
-            case .bodyweight, .cable, .cardioMachine:
-                return .bodyweight
-            }
-        }()
-
-        // Map new LiftPriority to old ExercisePriority
-        let priority: ExercisePriority = {
-            switch lift.category {
-            case .push, .pull:
-                return .upper
-            case .legs:
-                return .lower
-            case .cardio:
-                return .accessory
-            }
-        }()
+    /// Converts a Lift and WorkoutExercise to an ExerciseProfile (STEEL runtime config)
+    static func toExerciseProfile(from workoutExercise: WorkoutExercise) -> ExerciseProfile {
+        let lift = workoutExercise.lift
 
         return ExerciseProfile(
             name: lift.name,
-            category: category,
-            priority: priority,
+            equipment: lift.equipment,
+            priority: workoutExercise.priority,
             repRange: lift.steelConfig.repRange,
-            sets: sets,
+            sets: workoutExercise.targetSets,
             baseIncrement: lift.steelConfig.baseIncrement,
             rounding: lift.steelConfig.rounding,
             microAdjustStep: lift.steelConfig.microAdjustStep,
             weeklyCapPct: lift.steelConfig.weeklyCapPct,
             plateOptions: lift.steelConfig.plateOptions,
             warmupRule: lift.steelConfig.warmupRule,
-            defaultRestSec: restSec
+            defaultRestSec: Int(workoutExercise.restTime)
         )
     }
 
@@ -54,12 +30,8 @@ struct WorkoutTemplateConverter {
 
         // Convert each WorkoutExercise to an ExerciseProfile
         for workoutExercise in template.exercises.sorted(by: { $0.order < $1.order }) {
-            let profile = toExerciseProfile(
-                from: workoutExercise.lift,
-                sets: workoutExercise.targetSets,
-                restSec: Int(workoutExercise.restTime)
-            )
-            profiles[workoutExercise.lift.id] = profile  // Key by lift.id instead of profile.name
+            let profile = toExerciseProfile(from: workoutExercise)
+            profiles[workoutExercise.lift.id] = profile  // Key by lift.id
         }
 
         return profiles

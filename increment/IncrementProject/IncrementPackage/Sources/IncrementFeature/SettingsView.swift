@@ -66,7 +66,7 @@ public struct SettingsView: View {
                     SettingsSection(title: "ABOUT") {
                         SettingRow(
                             title: "Version",
-                            value: "1.0.0"
+                            value: "0.0.0.beta.1"
                         )
 
                         SettingRow(

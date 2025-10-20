@@ -1,20 +1,5 @@
 import Foundation
 
-// MARK: - Enums
-
-public enum ExerciseCategory: String, Codable, Sendable {
-    case barbell
-    case dumbbell
-    case machine
-    case bodyweight
-}
-
-public enum ExercisePriority: String, Codable, Sendable {
-    case upper
-    case lower
-    case accessory
-}
-
 // MARK: - Workout System Enums
 
 public enum LiftCategory: String, Codable, Sendable, CaseIterable {
@@ -84,8 +69,8 @@ public enum SessionDecision: String, Codable, Sendable {
 public struct ExerciseProfile: Codable, Sendable, Identifiable {
     public var id: String { name }  // Identifiable conformance using name
     public let name: String  // Display name (e.g., "Barbell Bench Press")
-    public let category: ExerciseCategory
-    public let priority: ExercisePriority
+    public let equipment: Equipment
+    public let priority: LiftPriority
     public let repRange: ClosedRange<Int>
     public let sets: Int
     public let baseIncrement: Double  // Total load step
@@ -98,8 +83,8 @@ public struct ExerciseProfile: Codable, Sendable, Identifiable {
 
     public init(
         name: String,
-        category: ExerciseCategory,
-        priority: ExercisePriority,
+        equipment: Equipment,
+        priority: LiftPriority,
         repRange: ClosedRange<Int>,
         sets: Int,
         baseIncrement: Double,
@@ -111,7 +96,7 @@ public struct ExerciseProfile: Codable, Sendable, Identifiable {
         defaultRestSec: Int
     ) {
         self.name = name
-        self.category = category
+        self.equipment = equipment
         self.priority = priority
         self.repRange = repRange
         self.sets = sets
