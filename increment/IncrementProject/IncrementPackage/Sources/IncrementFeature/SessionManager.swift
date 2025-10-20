@@ -739,7 +739,7 @@ public class SessionManager {
               let profile = exerciseProfiles[exerciseLog.exerciseId] else { return }
 
         nextPrescription = (
-            reps: profile.repRange.lowerBound,
+            reps: profile.repRange.upperBound,  // Prescribe max reps to aim for
             weight: exerciseLog.startWeight
         )
     }
