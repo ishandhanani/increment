@@ -693,6 +693,9 @@ public class SessionManager {
 
         session.stats.totalVolume = totalVolume
 
+        // Mark session as inactive (completed)
+        session.isActive = false
+
         // Update workout cycle if we used a template
         if let template = currentWorkoutTemplate {
             workoutCycle?.completeWorkout(template.workoutType)
@@ -711,6 +714,22 @@ public class SessionManager {
         Task {
             await endLiveActivity()
         }
+    }
+
+    /// Reset to intro screen after finishing a session (without discarding saved data)
+    public func resetToIntro() {
+        AppLogger.session.notice("Resetting to intro after completed session")
+
+        // Clear in-memory state but don't delete saved session from database
+        currentSession = nil
+        currentExerciseIndex = 0
+        currentSetIndex = 0
+        sessionState = .intro
+        currentExerciseLog = nil
+        nextPrescription = nil
+        isFirstExercise = true
+
+        AppLogger.session.info("Reset to intro complete")
     }
 
     // MARK: - Helper Methods
