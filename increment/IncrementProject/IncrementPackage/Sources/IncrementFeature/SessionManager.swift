@@ -208,6 +208,11 @@ public class SessionManager {
         // Clear database first (synchronously)
         PersistenceManager.shared.clearCurrentSessionSync()
 
+        // End Live Activity
+        Task {
+            await endLiveActivity()
+        }
+
         // Then clear in-memory state
         currentSession = nil
         currentExerciseIndex = 0
@@ -228,6 +233,11 @@ public class SessionManager {
         restTimer?.stop()
         restTimer = nil
         cancellables.removeAll()
+
+        // End Live Activity
+        Task {
+            await endLiveActivity()
+        }
 
         // Clear all in-memory state
         currentSession = nil
@@ -364,6 +374,12 @@ public class SessionManager {
     /// Cancel workout selection - go back to intro with no DB changes
     public func cancelWorkoutSelection() {
         AppLogger.session.debug("Cancelled workout selection")
+
+        // End Live Activity if one is active
+        Task {
+            await endLiveActivity()
+        }
+
         sessionState = .intro
     }
 
