@@ -176,127 +176,116 @@ struct SteelProgressionEngineTests {
 
     // MARK: - Warmup Prescription Tests
 
-    /// Test warmup for 135 lb bench press (user's example)
-    /// Critical: Ensures warmup progression matches real-world gym patterns
-    @Test("Warmup: 135 lb bench press follows realistic progression")
-    func testWarmup135BenchPress() {
+    /// Test warmup for first core exercise (135 lb bench press)
+    /// Should have 3 warmup sets with ~15 lb increments
+    @Test("Warmup: First core exercise gets 3 warmup sets")
+    func testWarmupFirstCoreExercise() {
         let prescription = SteelProgressionEngine.prescribeWarmup(
             equipment: .barbell,
             workingWeight: 135.0,
             category: .push,
+            priority: .core,
+            exerciseIndex: 0,  // First exercise
             plateOptions: [45.0, 25.0, 10.0, 5.0, 2.5]
         )
 
         #expect(prescription.needsWarmup == true)
-        #expect(prescription.sets.count >= 2)
+        #expect(prescription.sets.count == 3)
 
-        // Should include warmups like: 45 (bar), 95, and possibly 115
+        // Example for 135 lb: working back 3×15 = 90, 105, 120
+        // Rounded to plates: likely 90, 105, 115 or similar
         let weights = prescription.sets.map { $0.weight }
-        #expect(weights.contains(45.0))  // Bar
-        #expect(weights.contains(95.0))  // Standard warmup weight
+
+        // All warmup weights should be less than working weight
+        for weight in weights {
+            #expect(weight < 135.0)
+        }
+
+        // First warmup should be lightest, last should be closest to working
+        #expect(weights.first! < weights.last!)
     }
 
-    /// Test warmup for 185 lb bench press
-    /// Should have more warmup sets for heavier weight
-    @Test("Warmup: 185 lb bench press has progressive warmup")
-    func testWarmup185BenchPress() {
+    /// Test warmup for second core exercise
+    /// Should have 1 warmup set (15 lbs less than working)
+    @Test("Warmup: Second core exercise gets 1 warmup set")
+    func testWarmupSecondCoreExercise() {
         let prescription = SteelProgressionEngine.prescribeWarmup(
             equipment: .barbell,
             workingWeight: 185.0,
-            category: .push,
+            category: .pull,
+            priority: .core,
+            exerciseIndex: 1,  // Second exercise
             plateOptions: [45.0, 25.0, 10.0, 5.0, 2.5]
         )
 
         #expect(prescription.needsWarmup == true)
-        #expect(prescription.sets.count >= 3)
+        #expect(prescription.sets.count == 1)
 
-        // Should include: 45, 95, 135, 155 or similar
-        let weights = prescription.sets.map { $0.weight }
-        #expect(weights.contains(45.0))
-        #expect(weights.contains(95.0))
-        #expect(weights.contains(135.0))
-
-        // Final warmup should be close to working weight (85-90%)
-        if let lastWarmup = weights.last {
-            let percentage = lastWarmup / 185.0
-            #expect(percentage >= 0.80)  // At least 80% of working weight
-            #expect(percentage < 1.0)    // But less than working weight
-        }
+        // Should be ~15 lbs less than working weight
+        let warmupWeight = prescription.sets.first?.weight ?? 0
+        #expect(warmupWeight >= 165.0)  // At least 185-20
+        #expect(warmupWeight <= 175.0)  // At most 185-10
+        #expect(warmupWeight < 185.0)   // Less than working weight
     }
 
-    /// Test warmup for heavy 315 lb squat
-    /// Should have multiple progressive warmup sets
-    @Test("Warmup: 315 lb squat has comprehensive warmup")
-    func testWarmup315Squat() {
+    /// Test warmup for third core exercise (if any)
+    /// Should get 1 warmup set like second core
+    @Test("Warmup: Third+ core exercise gets 1 warmup set")
+    func testWarmupThirdCoreExercise() {
         let prescription = SteelProgressionEngine.prescribeWarmup(
             equipment: .barbell,
-            workingWeight: 315.0,
+            workingWeight: 225.0,
             category: .legs,
+            priority: .core,
+            exerciseIndex: 2,  // Third exercise
             plateOptions: [45.0, 25.0, 10.0, 5.0, 2.5]
         )
 
         #expect(prescription.needsWarmup == true)
-        #expect(prescription.sets.count >= 3)
-        #expect(prescription.sets.count <= 5)  // Not too many warmups
+        #expect(prescription.sets.count == 1)
 
-        // Should include progressive weights: 45, 95, 135, 185, 225, 275
-        let weights = prescription.sets.map { $0.weight }
-        #expect(weights.contains(45.0))
-        #expect(weights.contains(135.0) || weights.contains(185.0))
-        #expect(weights.contains(225.0) || weights.contains(275.0))
+        let warmupWeight = prescription.sets.first?.weight ?? 0
+        #expect(warmupWeight >= 205.0)  // ~15 lbs less
+        #expect(warmupWeight < 225.0)
+    }
 
-        // Rep scheme should decrease as weight increases
+    /// Test that accessory exercises skip warmup
+    @Test("Warmup: Accessory exercises skip warmup")
+    func testWarmupAccessoryExercise() {
+        let prescription = SteelProgressionEngine.prescribeWarmup(
+            equipment: .barbell,
+            workingWeight: 95.0,
+            category: .push,
+            priority: .accessory,  // Accessory exercise
+            exerciseIndex: 3,
+            plateOptions: [45.0, 25.0, 10.0, 5.0, 2.5]
+        )
+
+        #expect(prescription.needsWarmup == false)
+        #expect(prescription.sets.isEmpty)
+    }
+
+    /// Test warmup rep scheme decreases with weight
+    @Test("Warmup: Rep scheme decreases as weight increases")
+    func testWarmupRepScheme() {
+        let prescription = SteelProgressionEngine.prescribeWarmup(
+            equipment: .barbell,
+            workingWeight: 225.0,
+            category: .legs,
+            priority: .core,
+            exerciseIndex: 0,
+            plateOptions: [45.0, 25.0, 10.0, 5.0, 2.5]
+        )
+
+        #expect(prescription.needsWarmup == true)
+        #expect(prescription.sets.count == 3)
+
+        // Rep scheme should decrease or stay same as weight increases
         for (index, set) in prescription.sets.enumerated() {
             if index > 0 {
                 let previousSet = prescription.sets[index - 1]
-                // Heavier warmups should have fewer or equal reps
                 #expect(set.reps <= previousSet.reps)
             }
-        }
-    }
-
-    /// Test warmup for very light weight
-    /// Should only have bar or minimal warmup
-    @Test("Warmup: Very light weight needs minimal warmup")
-    func testWarmupLightWeight() {
-        let prescription = SteelProgressionEngine.prescribeWarmup(
-            equipment: .barbell,
-            workingWeight: 65.0,
-            category: .push,
-            plateOptions: [45.0, 25.0, 10.0, 5.0, 2.5]
-        )
-
-        #expect(prescription.needsWarmup == true)
-        // Just the bar
-        #expect(prescription.sets.count == 1)
-        #expect(prescription.sets.first?.weight == 45.0)
-    }
-
-    /// Test warmup for dumbbell exercise
-    /// Should have 1-2 warmup sets depending on weight
-    @Test("Warmup: Dumbbell exercise has appropriate warmup")
-    func testWarmupDumbbell() {
-        // Light dumbbell
-        let lightPrescription = SteelProgressionEngine.prescribeWarmup(
-            equipment: .dumbbell,
-            workingWeight: 30.0,
-            category: .push
-        )
-        #expect(lightPrescription.sets.count == 1)
-
-        // Heavy dumbbell
-        let heavyPrescription = SteelProgressionEngine.prescribeWarmup(
-            equipment: .dumbbell,
-            workingWeight: 80.0,
-            category: .push
-        )
-        #expect(heavyPrescription.sets.count == 2)
-
-        // Final warmup should be ~80% of working weight
-        if let lastWarmup = heavyPrescription.sets.last {
-            let percentage = lastWarmup.weight / 80.0
-            #expect(percentage >= 0.75)
-            #expect(percentage < 1.0)
         }
     }
 
@@ -306,7 +295,9 @@ struct SteelProgressionEngineTests {
         let prescription = SteelProgressionEngine.prescribeWarmup(
             equipment: .bodyweight,
             workingWeight: 0.0,
-            category: .pull
+            category: .pull,
+            priority: .core,
+            exerciseIndex: 0
         )
 
         #expect(prescription.needsWarmup == false)
@@ -319,7 +310,9 @@ struct SteelProgressionEngineTests {
         let prescription = SteelProgressionEngine.prescribeWarmup(
             equipment: .cardioMachine,
             workingWeight: 0.0,
-            category: .cardio
+            category: .cardio,
+            priority: .core,
+            exerciseIndex: 0
         )
 
         #expect(prescription.needsWarmup == false)

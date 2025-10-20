@@ -23,12 +23,16 @@ public class SteelProgressionEngine {
     ///   - equipment: Type of equipment used
     ///   - workingWeight: Starting weight for working sets
     ///   - category: Exercise category (cardio, etc.)
+    ///   - priority: Exercise priority (.core or .accessory)
+    ///   - exerciseIndex: Position in workout (0 = first exercise, 1 = second, etc.)
     ///   - plateOptions: Available plates for proper warmup progression (barbells only)
     /// - Returns: Warmup prescription with sets or indication that no warmup needed
     public static func prescribeWarmup(
         equipment: Equipment,
         workingWeight: Double,
         category: LiftCategory,
+        priority: LiftPriority,
+        exerciseIndex: Int,
         plateOptions: [Double]? = nil
     ) -> WarmupPrescription {
         // Skip warmups for cardio
@@ -41,104 +45,90 @@ public class SteelProgressionEngine {
             return WarmupPrescription(sets: [], needsWarmup: false)
         }
 
-        // Generate warmup sets based on equipment and weight
+        // Accessory exercises: No warmup needed (already warmed up from core lifts)
+        if priority == .accessory {
+            return WarmupPrescription(sets: [], needsWarmup: false)
+        }
+
+        // Generate warmup sets based on exercise priority and position
         var sets: [WarmupPrescription.WarmupSet] = []
 
-        // Barbell exercises: Use plate-aware progression
-        if equipment == .barbell {
-            sets = generateBarbellWarmup(workingWeight: workingWeight, plateOptions: plateOptions)
-        }
-        // Dumbbell/Machine: 1-2 warmup sets based on working weight
-        else if equipment == .dumbbell || equipment == .machine {
-            if workingWeight >= 50 {
-                // Heavier weight: 2 warmups
-                sets = [
-                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.6, reps: 5, stepNumber: 0),
-                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.8, reps: 3, stepNumber: 1)
-                ]
-            } else {
-                // Lighter weight: 1 warmup
-                sets = [
-                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.7, reps: 5, stepNumber: 0)
-                ]
-            }
-        }
-        // Cable: 1-2 moderate warmups
-        else if equipment == .cable {
-            if workingWeight >= 60 {
-                sets = [
-                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.6, reps: 5, stepNumber: 0),
-                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.8, reps: 3, stepNumber: 1)
-                ]
-            } else {
-                sets = [
-                    WarmupPrescription.WarmupSet(weight: workingWeight * 0.7, reps: 5, stepNumber: 0)
-                ]
-            }
+        if priority == .core && exerciseIndex == 0 {
+            // First core exercise: 3 warmup sets (~15 lb increments)
+            sets = generateCoreWarmup(
+                workingWeight: workingWeight,
+                warmupSets: 3,
+                plateOptions: plateOptions
+            )
+        } else if priority == .core && exerciseIndex == 1 {
+            // Second core exercise: 1 warmup set (15 lbs less than working)
+            let warmupWeight = max(45.0, workingWeight - 15.0)
+            sets = [
+                WarmupPrescription.WarmupSet(weight: warmupWeight, reps: 5, stepNumber: 0)
+            ]
+        } else {
+            // Fallback for any other core exercises (3rd+): 1 warmup
+            let warmupWeight = max(45.0, workingWeight - 15.0)
+            sets = [
+                WarmupPrescription.WarmupSet(weight: warmupWeight, reps: 5, stepNumber: 0)
+            ]
         }
 
         return WarmupPrescription(sets: sets, needsWarmup: !sets.isEmpty)
     }
 
-    /// Generates optimal barbell warmup progression using real plate combinations
-    /// Follows standard gym plate loading: 45 → 95 → 115 → 135 → 155 → 185 → 205 → 225 → etc.
-    private static func generateBarbellWarmup(
+    /// Generates core exercise warmup using ~15 lb increments
+    /// Strategy: Work backwards from working weight in ~15 lb decrements
+    /// Example for 135 lb: 105, 90, 75 → reversed to 75×5, 90×5, 105×3, 120×2
+    private static func generateCoreWarmup(
         workingWeight: Double,
+        warmupSets: Int,
         plateOptions: [Double]?
     ) -> [WarmupPrescription.WarmupSet] {
         let barWeight = 45.0
-        var sets: [WarmupPrescription.WarmupSet] = []
-
-        // For very light working weights (<= 65 lbs), just use the bar
-        if workingWeight <= 65 {
-            sets.append(WarmupPrescription.WarmupSet(weight: barWeight, reps: 5, stepNumber: 0))
-            return sets
-        }
-
-        // Standard plate progression (commonly loaded weights)
-        // These represent typical gym warmup patterns
-        let standardWeights: [Double] = [45, 95, 115, 135, 155, 185, 205, 225, 275, 315, 365, 405, 455]
-
-        // Find warmup weights that are below working weight
+        let increment = 15.0  // ~15 lb increments between warmup sets
         var warmupWeights: [Double] = []
 
-        for weight in standardWeights {
-            if weight < workingWeight {
-                warmupWeights.append(weight)
-            } else {
-                break
+        // Generate warmup weights by working backwards from working weight
+        var currentWeight = workingWeight
+        for _ in 0..<warmupSets {
+            currentWeight -= increment
+            if currentWeight < barWeight {
+                currentWeight = barWeight
             }
+            warmupWeights.insert(currentWeight, at: 0)  // Insert at beginning to maintain ascending order
         }
 
-        // If working weight doesn't align with standard weights, add a final warmup at ~85-90%
-        let finalWarmupTarget = workingWeight * 0.87 // ~87% of working weight
-        if let lastWarmup = warmupWeights.last, lastWarmup < finalWarmupTarget {
-            // Add one more warmup closer to working weight
-            if let plates = plateOptions {
-                let closerWarmup = roundToPlates(finalWarmupTarget, plates: plates, barWeight: barWeight)
-                if closerWarmup > lastWarmup && closerWarmup < workingWeight {
-                    warmupWeights.append(closerWarmup)
-                }
-            } else {
-                // No plates specified, use percentage-based
-                warmupWeights.append(finalWarmupTarget)
+        // Remove duplicates (in case we hit bar weight multiple times)
+        warmupWeights = Array(Set(warmupWeights)).sorted()
+
+        // Round weights to achievable values using plate math (if plates provided)
+        if let plates = plateOptions {
+            warmupWeights = warmupWeights.map { weight in
+                roundToPlates(weight, plates: plates, barWeight: barWeight)
             }
+            // Remove duplicates again after rounding
+            warmupWeights = Array(Set(warmupWeights)).sorted()
+        } else {
+            // Round to nearest 5 lbs for realistic gym weights
+            warmupWeights = warmupWeights.map { weight in
+                (weight / 5.0).rounded() * 5.0
+            }
+            warmupWeights = Array(Set(warmupWeights)).sorted()
         }
 
-        // Determine rep scheme based on weight percentage
-        // Strategy: Start with higher reps (5), decrease as weight increases (3, 2, 1)
+        // Generate warmup sets with decreasing reps as weight increases
+        var sets: [WarmupPrescription.WarmupSet] = []
         for (index, weight) in warmupWeights.enumerated() {
-            let reps: Int
             let percentOfWorkingWeight = weight / workingWeight
+            let reps: Int
 
-            if percentOfWorkingWeight < 0.5 {
+            if percentOfWorkingWeight < 0.6 {
                 reps = 5  // Light warmup: 5 reps
-            } else if percentOfWorkingWeight < 0.75 {
+            } else if percentOfWorkingWeight < 0.8 {
                 reps = 3  // Moderate warmup: 3 reps
-            } else if percentOfWorkingWeight < 0.9 {
-                reps = 2  // Heavy warmup: 2 reps
             } else {
-                reps = 1  // Very heavy warmup: 1 rep
+                reps = 2  // Heavy warmup: 2 reps (close to working weight)
             }
 
             sets.append(WarmupPrescription.WarmupSet(
@@ -148,22 +138,11 @@ public class SteelProgressionEngine {
             ))
         }
 
-        // Ensure we have at least 1 warmup set but not more than 5
+        // Ensure we got at least one warmup set
         if sets.isEmpty {
-            // Fallback: simple percentage-based warmup
-            sets.append(WarmupPrescription.WarmupSet(weight: workingWeight * 0.7, reps: 5, stepNumber: 0))
-        } else if sets.count > 5 {
-            // Too many warmups - keep only the most relevant ones
-            // Keep first, last, and middle warmups
-            let keep = [0, sets.count / 3, 2 * sets.count / 3, sets.count - 1]
-            sets = keep.enumerated().map { index, originalIndex in
-                let originalSet = sets[originalIndex]
-                return WarmupPrescription.WarmupSet(
-                    weight: originalSet.weight,
-                    reps: originalSet.reps,
-                    stepNumber: index
-                )
-            }
+            // Fallback: one warmup at 85% of working weight
+            let warmupWeight = max(barWeight, workingWeight - 15.0)
+            sets.append(WarmupPrescription.WarmupSet(weight: warmupWeight, reps: 5, stepNumber: 0))
         }
 
         return sets

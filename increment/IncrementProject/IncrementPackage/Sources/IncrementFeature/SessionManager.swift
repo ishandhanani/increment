@@ -414,26 +414,30 @@ public class SessionManager {
 
         currentSetIndex = 0
 
+        // Determine exercise index in workout
+        let exerciseIndex = currentSession?.workoutTemplate?.exercises.firstIndex(where: { $0.lift.id == exerciseId }) ?? 0
+
         // Use STEEL to determine warmup prescription
-        if isFirstExercise, let exercise = currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseId }) {
+        if let exercise = currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseId }) {
             let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
                 equipment: exercise.lift.equipment,
                 workingWeight: startWeight,
                 category: exercise.lift.category,
+                priority: exercise.priority,
+                exerciseIndex: exerciseIndex,
                 plateOptions: exercise.lift.steelConfig.plateOptions
             )
 
             if warmupPrescription.needsWarmup {
                 AppLogger.session.debug("STEEL prescribed \(warmupPrescription.sets.count) warmup sets for \(exercise.lift.name, privacy: .public)")
                 sessionState = .warmup(step: 0)
-                isFirstExercise = false
             } else {
                 AppLogger.session.debug("STEEL skipped warmup for \(exercise.lift.name, privacy: .public)")
                 sessionState = .workingSet
                 computeInitialPrescription()
             }
         } else {
-            // Not first exercise - skip warmups
+            // Exercise not found in template - skip warmup
             sessionState = .workingSet
             computeInitialPrescription()
         }
@@ -459,10 +463,14 @@ public class SessionManager {
         guard let exerciseLog = currentExerciseLog,
               let exercise = currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }) else { return }
 
+        let exerciseIndex = currentSession?.workoutTemplate?.exercises.firstIndex(where: { $0.lift.id == exerciseLog.exerciseId }) ?? 0
+
         let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
             equipment: exercise.lift.equipment,
             workingWeight: exerciseLog.startWeight,
             category: exercise.lift.category,
+            priority: exercise.priority,
+            exerciseIndex: exerciseIndex,
             plateOptions: exercise.lift.steelConfig.plateOptions
         )
 
@@ -483,10 +491,14 @@ public class SessionManager {
             return nil
         }
 
+        let exerciseIndex = currentSession?.workoutTemplate?.exercises.firstIndex(where: { $0.lift.id == exerciseLog.exerciseId }) ?? 0
+
         let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
             equipment: exercise.lift.equipment,
             workingWeight: exerciseLog.startWeight,
             category: exercise.lift.category,
+            priority: exercise.priority,
+            exerciseIndex: exerciseIndex,
             plateOptions: exercise.lift.steelConfig.plateOptions
         )
 
