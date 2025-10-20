@@ -70,23 +70,35 @@ struct ReviewView: View {
 @MainActor
 struct DoneView: View {
     @Environment(SessionManager.self) private var sessionManager
+    @State private var insightsManager = WorkoutInsightsManager.shared
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 0) {
             Spacer()
 
-            VStack(spacing: 16) {
-                Text("Session Complete")
-                    .font(.system(.title, design: .monospaced))
-                    .fontWeight(.bold)
+            VStack(spacing: 24) {
+                // Session complete header
+                VStack(spacing: 16) {
+                    Text("Session Complete")
+                        .font(.system(.title, design: .monospaced))
+                        .fontWeight(.bold)
 
-                if let session = sessionManager.currentSession {
-                    Text("Total Volume: \(Int(session.stats.totalVolume)) lb")
-                        .font(.system(.body, design: .monospaced))
-                        .opacity(0.7)
+                    if let session = sessionManager.currentSession {
+                        Text("Total Volume: \(Int(session.stats.totalVolume)) lb")
+                            .font(.system(.body, design: .monospaced))
+                            .opacity(0.7)
+                    }
+                }
+                .foregroundColor(.white)
+
+                // AI Insight Panel
+                if insightsManager.isGenerating {
+                    InsightLoadingView()
+                } else if let insight = insightsManager.currentInsight {
+                    InsightView(insight: insight)
                 }
             }
-            .foregroundColor(.white)
+            .padding(.horizontal, 24)
 
             Spacer()
 
@@ -96,6 +108,84 @@ struct DoneView: View {
             } label: {
                 Text("BACK TO START")
             }
+        }
+    }
+}
+
+// MARK: - Insight Views
+
+@MainActor
+struct InsightView: View {
+    let insight: WorkoutInsight
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack {
+                Text(insight.isAIGenerated ? "AI INSIGHT" : "WORKOUT SUMMARY")
+                    .font(.system(.caption, design: .monospaced))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white.opacity(0.6))
+
+                Spacer()
+
+                if insight.isAIGenerated {
+                    Text("ON-DEVICE")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundColor(.green.opacity(0.8))
+                }
+            }
+
+            // Content
+            Text(insight.content)
+                .font(.system(.body, design: .monospaced))
+                .foregroundColor(.white)
+                .lineSpacing(4)
+                .multilineTextAlignment(.leading)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+        )
+    }
+}
+
+@MainActor
+struct InsightLoadingView: View {
+    @State private var dots = ""
+    let timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("GENERATING INSIGHT\(dots)")
+                    .font(.system(.caption, design: .monospaced))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white.opacity(0.6))
+
+                Spacer()
+            }
+
+            ProgressView()
+                .tint(.white)
+                .padding(.vertical, 8)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+        )
+        .onReceive(timer) { _ in
+            dots = dots.count >= 3 ? "" : dots + "."
         }
     }
 }
