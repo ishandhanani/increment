@@ -67,7 +67,8 @@ public enum SessionDecision: String, Codable, Sendable {
 /// Runtime configuration for STEEL progression engine
 /// Note: Keyed by exercise ID (from Lift.id) in dictionaries, not by this struct's properties
 public struct ExerciseProfile: Codable, Sendable, Identifiable {
-    public var id: String { name }  // Identifiable conformance using name
+    public var id: String { exerciseId }  // Identifiable conformance using snake_case ID
+    public let exerciseId: String  // Snake_case ID (e.g., "barbell_bench_press")
     public let name: String  // Display name (e.g., "Barbell Bench Press")
     public let equipment: Equipment
     public let priority: LiftPriority
@@ -82,6 +83,7 @@ public struct ExerciseProfile: Codable, Sendable, Identifiable {
     public let defaultRestSec: Int
 
     public init(
+        exerciseId: String,
         name: String,
         equipment: Equipment,
         priority: LiftPriority,
@@ -95,6 +97,7 @@ public struct ExerciseProfile: Codable, Sendable, Identifiable {
         warmupRule: String = "ramped_2",
         defaultRestSec: Int
     ) {
+        self.exerciseId = exerciseId
         self.name = name
         self.equipment = equipment
         self.priority = priority

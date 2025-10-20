@@ -8,6 +8,7 @@ struct WorkoutTemplateConverter {
         let lift = workoutExercise.lift
 
         return ExerciseProfile(
+            exerciseId: lift.id,
             name: lift.name,
             equipment: lift.equipment,
             priority: workoutExercise.priority,
