@@ -96,9 +96,9 @@ public struct AnalyticsEngine {
         sessions: [Session],
         profiles: [String: ExerciseProfile]
     ) -> [VolumeByCategory] {
-        var categoryVolumes: [ExerciseCategory: Double] = [:]
+        var equipmentVolumes: [Equipment: Double] = [:]
 
-        // Sum volume by category
+        // Sum volume by equipment type
         for session in sessions {
             for exerciseLog in session.exerciseLogs {
                 guard let profile = profiles[exerciseLog.exerciseId] else { continue }
@@ -107,17 +107,17 @@ public struct AnalyticsEngine {
                     total + (Double(setLog.achievedReps) * setLog.actualWeight)
                 }
 
-                categoryVolumes[profile.category, default: 0.0] += exerciseVolume
+                equipmentVolumes[profile.equipment, default: 0.0] += exerciseVolume
             }
         }
 
-        let totalVolume = categoryVolumes.values.reduce(0.0, +)
+        let totalVolume = equipmentVolumes.values.reduce(0.0, +)
         guard totalVolume > 0 else { return [] }
 
         // Convert to array with percentages
-        return categoryVolumes.map { category, volume in
+        return equipmentVolumes.map { equipment, volume in
             VolumeByCategory(
-                category: category,
+                equipment: equipment,
                 volume: volume,
                 percentage: (volume / totalVolume) * 100
             )
