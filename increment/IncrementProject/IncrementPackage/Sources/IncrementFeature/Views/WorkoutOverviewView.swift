@@ -60,16 +60,18 @@ struct WorkoutOverviewView: View {
                                             .font(.system(.body, design: .monospaced))
 
                                         HStack(spacing: 12) {
-                                            Text("\(exercise.targetSets) sets")
-                                                .font(.system(.caption, design: .monospaced))
-                                                .opacity(0.6)
+                                            if let steelConfig = exercise.lift.steelConfig {
+                                                Text("\(exercise.targetSets) sets")
+                                                    .font(.system(.caption, design: .monospaced))
+                                                    .opacity(0.6)
 
-                                            Text("•")
-                                                .opacity(0.4)
+                                                Text("•")
+                                                    .opacity(0.4)
 
-                                            Text("\(exercise.lift.steelConfig.repRange.lowerBound)-\(exercise.lift.steelConfig.repRange.upperBound) reps")
-                                                .font(.system(.caption, design: .monospaced))
-                                                .opacity(0.6)
+                                                Text("\(steelConfig.repRange.lowerBound)-\(steelConfig.repRange.upperBound) reps")
+                                                    .font(.system(.caption, design: .monospaced))
+                                                    .opacity(0.6)
+                                            }
 
                                             if exercise.priority == .core {
                                                 Text("•")

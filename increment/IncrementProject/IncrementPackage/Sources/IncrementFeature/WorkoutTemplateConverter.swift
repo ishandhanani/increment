@@ -4,7 +4,13 @@ import Foundation
 struct WorkoutTemplateConverter {
 
     /// Converts a Lift to an ExerciseProfile (maintaining STEEL compatibility)
-    static func toExerciseProfile(from lift: Lift, sets: Int, restSec: Int) -> ExerciseProfile {
+    /// Returns nil for cardio exercises
+    static func toExerciseProfile(from lift: Lift, sets: Int, restSec: Int) -> ExerciseProfile? {
+        // Skip cardio exercises - they don't use ExerciseProfile
+        guard let steelConfig = lift.steelConfig else {
+            return nil
+        }
+        
         // Map new Equipment to old ExerciseCategory
         let category: ExerciseCategory = {
             switch lift.equipment {
@@ -35,31 +41,33 @@ struct WorkoutTemplateConverter {
             name: lift.name,
             category: category,
             priority: priority,
-            repRange: lift.steelConfig.repRange,
+            repRange: steelConfig.repRange,
             sets: sets,
-            baseIncrement: lift.steelConfig.baseIncrement,
-            rounding: lift.steelConfig.rounding,
-            microAdjustStep: lift.steelConfig.microAdjustStep,
-            weeklyCapPct: lift.steelConfig.weeklyCapPct,
-            plateOptions: lift.steelConfig.plateOptions,
-            warmupRule: lift.steelConfig.warmupRule,
+            baseIncrement: steelConfig.baseIncrement,
+            rounding: steelConfig.rounding,
+            microAdjustStep: steelConfig.microAdjustStep,
+            weeklyCapPct: steelConfig.weeklyCapPct,
+            plateOptions: steelConfig.plateOptions,
+            warmupRule: steelConfig.warmupRule,
             defaultRestSec: restSec
         )
     }
 
     /// Converts a WorkoutTemplate to dictionary of ExerciseProfiles
     /// Returns: [String: ExerciseProfile] keyed by exercise ID
+    /// Note: Skips cardio exercises
     static func toExerciseProfiles(from template: WorkoutTemplate) -> [String: ExerciseProfile] {
         var profiles: [String: ExerciseProfile] = [:]
 
         // Convert each WorkoutExercise to an ExerciseProfile
         for workoutExercise in template.exercises.sorted(by: { $0.order < $1.order }) {
-            let profile = toExerciseProfile(
+            if let profile = toExerciseProfile(
                 from: workoutExercise.lift,
                 sets: workoutExercise.targetSets,
                 restSec: Int(workoutExercise.restTime)
-            )
-            profiles[workoutExercise.lift.id] = profile  // Key by lift.id instead of profile.name
+            ) {
+                profiles[workoutExercise.lift.id] = profile  // Key by lift.id instead of profile.name
+            }
         }
 
         return profiles
