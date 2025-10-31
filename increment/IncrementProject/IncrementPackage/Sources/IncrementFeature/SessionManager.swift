@@ -759,6 +759,16 @@ public class SessionManager {
         // Invalidate analytics cache so new session appears immediately
         invalidateAnalyticsCache()
 
+        // Generate post-workout AI insight
+        Task {
+            do {
+                _ = try await WorkoutInsightsManager.shared.generatePostWorkoutSummary(for: session)
+                AppLogger.session.info("Generated post-workout insight")
+            } catch {
+                AppLogger.session.error("Failed to generate workout insight: \(error.localizedDescription)")
+            }
+        }
+
         // End Live Activity
         Task {
             await endLiveActivity()
