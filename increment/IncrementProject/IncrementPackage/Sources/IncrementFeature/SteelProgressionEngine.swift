@@ -53,7 +53,7 @@ public class SteelProgressionEngine {
     }
 
     /// Computes next set prescription based on current performance
-    /// Adjusted for real-world training patterns with smarter progression/regression
+    /// Simplified approach: constant rep target, only weight adjusts
     public static func microAdjust(
         currentWeight: Double,
         achievedReps: Int,
@@ -67,61 +67,58 @@ public class SteelProgressionEngine {
         let rMax = repRange.upperBound
         let micro = microAdjustStep ?? 0
 
+        // Always target the middle of the rep range for consistency
+        let targetReps = (rMin + rMax) / 2
+
         switch rating {
         case .fail:
-            // Complete failure - significant weight reduction
-            // Drop by full base increment to ensure recovery
+            // Complete failure - drop full base increment
             let nextWeight = round(max(0, currentWeight - baseIncrement), to: rounding)
-            return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
+            return MicroAdjustResult(nextWeight: nextWeight, nextReps: targetReps)
 
         case .holyShit:
-            // Struggled badly - conservative approach
+            // Struggled badly - drop weight
             if achievedReps < rMin {
-                // Didn't even hit minimum - drop weight significantly
+                // Didn't hit minimum - drop full increment
                 let nextWeight = round(max(0, currentWeight - baseIncrement), to: rounding)
-                return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
-            } else if achievedReps <= rMin + 1 {
-                // Just barely hit minimum - drop by micro if available
+                return MicroAdjustResult(nextWeight: nextWeight, nextReps: targetReps)
+            } else {
+                // Hit minimum but struggled - drop micro if available
                 if micro > 0 {
                     let nextWeight = round(max(0, currentWeight - micro), to: rounding)
-                    return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
+                    return MicroAdjustResult(nextWeight: nextWeight, nextReps: targetReps)
+                } else {
+                    // No micro available - maintain weight
+                    return MicroAdjustResult(nextWeight: currentWeight, nextReps: targetReps)
                 }
             }
-            // Hit reps but it was very hard - maintain weight
-            return MicroAdjustResult(nextWeight: currentWeight, nextReps: clamp(achievedReps, rMin, rMax))
 
         case .hard:
-            // Challenging but doable - maintain or small adjustment
+            // Challenging but doable - maintain weight
             if achievedReps < rMin {
-                // Didn't hit minimum - drop by micro if available, else base
+                // Didn't hit minimum - drop weight
                 let dropAmount = micro > 0 ? micro : baseIncrement
                 let nextWeight = round(max(0, currentWeight - dropAmount), to: rounding)
-                return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
-            } else if achievedReps == rMin {
-                // Hit exactly minimum - maintain weight, stay at minimum reps
-                return MicroAdjustResult(nextWeight: currentWeight, nextReps: rMin)
+                return MicroAdjustResult(nextWeight: nextWeight, nextReps: targetReps)
             } else {
-                // Hit above minimum - maintain weight, aim for same reps achieved
-                return MicroAdjustResult(nextWeight: currentWeight, nextReps: clamp(achievedReps, rMin, rMax))
+                // Hit minimum or above - maintain weight
+                return MicroAdjustResult(nextWeight: currentWeight, nextReps: targetReps)
             }
 
         case .easy:
-            // Felt easy - add weight if hitting upper range
+            // Felt easy - add weight if hit max reps
             if achievedReps >= rMax {
                 // Hit top of range and felt easy - add micro load if available
                 if micro > 0 {
                     let nextWeight = round(currentWeight + micro, to: rounding)
-                    return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMax)
+                    return MicroAdjustResult(nextWeight: nextWeight, nextReps: targetReps)
                 } else {
-                    // No micro available - maintain weight, aim for more reps next time
-                    return MicroAdjustResult(nextWeight: currentWeight, nextReps: rMax)
+                    // No micro available - maintain weight
+                    return MicroAdjustResult(nextWeight: currentWeight, nextReps: targetReps)
                 }
-            } else if achievedReps >= rMax - 1 {
-                // Close to top - maintain weight, push for max reps
-                return MicroAdjustResult(nextWeight: currentWeight, nextReps: rMax)
             } else {
-                // Mid-range - maintain weight, aim for achieved reps
-                return MicroAdjustResult(nextWeight: currentWeight, nextReps: clamp(achievedReps, rMin, rMax))
+                // Didn't hit max - maintain weight, push for more reps
+                return MicroAdjustResult(nextWeight: currentWeight, nextReps: targetReps)
             }
         }
     }

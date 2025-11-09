@@ -39,7 +39,7 @@ struct WorkoutBuilder {
                 targetSets: 3,
                 restTime: 150
             ),
-            // Accessory lifts (3)
+            // Accessory lifts (2)
             WorkoutExercise(
                 lift: LiftLibrary.cableFly,
                 order: 3,
@@ -50,13 +50,6 @@ struct WorkoutBuilder {
             WorkoutExercise(
                 lift: LiftLibrary.tricepPushdown,
                 order: 4,
-                priority: .accessory,
-                targetSets: 3,
-                restTime: 90
-            ),
-            WorkoutExercise(
-                lift: LiftLibrary.skullcrushers,
-                order: 5,
                 priority: .accessory,
                 targetSets: 3,
                 restTime: 90
@@ -75,7 +68,7 @@ struct WorkoutBuilder {
 
     private static func buildPullDay() -> WorkoutTemplate {
         let exercises: [WorkoutExercise] = [
-            // Core lifts (3)
+            // Core lifts (2)
             WorkoutExercise(
                 lift: LiftLibrary.pullups,
                 order: 1,
@@ -84,30 +77,23 @@ struct WorkoutBuilder {
                 restTime: 180
             ),
             WorkoutExercise(
-                lift: LiftLibrary.latPulldown,
-                order: 2,
-                priority: .core,
-                targetSets: 3,
-                restTime: 150
-            ),
-            WorkoutExercise(
                 lift: LiftLibrary.barbellRow,
-                order: 3,
+                order: 2,
                 priority: .core,
                 targetSets: 3,
                 restTime: 150
             ),
             // Accessory lifts (2)
             WorkoutExercise(
-                lift: LiftLibrary.dumbbellCurl,
-                order: 4,
+                lift: LiftLibrary.latPulldown,
+                order: 3,
                 priority: .accessory,
                 targetSets: 3,
-                restTime: 90
+                restTime: 120
             ),
             WorkoutExercise(
-                lift: LiftLibrary.hammerCurl,
-                order: 5,
+                lift: LiftLibrary.dumbbellCurl,
+                order: 4,
                 priority: .accessory,
                 targetSets: 3,
                 restTime: 90
