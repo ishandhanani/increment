@@ -64,7 +64,7 @@ public enum SessionDecision: String, Codable, Sendable {
 
 // MARK: - ExerciseProfile
 
-/// Runtime configuration for STEEL progression engine
+/// Runtime configuration for STEEL progression engine (simplified)
 /// Note: Keyed by exercise ID (from Lift.id) in dictionaries, not by this struct's properties
 public struct ExerciseProfile: Codable, Sendable, Identifiable {
     public var id: String { exerciseId }  // Identifiable conformance using snake_case ID
@@ -74,12 +74,8 @@ public struct ExerciseProfile: Codable, Sendable, Identifiable {
     public let priority: LiftPriority
     public let repRange: ClosedRange<Int>
     public let sets: Int
-    public let baseIncrement: Double  // Total load step
-    public let rounding: Double
-    public let microAdjustStep: Double?
-    public let weeklyCapPct: Double  // 5-10%
+    public let incrementPerSide: Double  // 5lb per side
     public let plateOptions: [Double]?  // Per-side plates for barbells
-    public let warmupRule: String  // "ramped_2" for 50%×5 → 70%×3
     public let defaultRestSec: Int
 
     public init(
@@ -89,12 +85,8 @@ public struct ExerciseProfile: Codable, Sendable, Identifiable {
         priority: LiftPriority,
         repRange: ClosedRange<Int>,
         sets: Int,
-        baseIncrement: Double,
-        rounding: Double,
-        microAdjustStep: Double? = nil,
-        weeklyCapPct: Double,
+        incrementPerSide: Double = 5.0,
         plateOptions: [Double]? = nil,
-        warmupRule: String = "ramped_2",
         defaultRestSec: Int
     ) {
         self.exerciseId = exerciseId
@@ -103,12 +95,8 @@ public struct ExerciseProfile: Codable, Sendable, Identifiable {
         self.priority = priority
         self.repRange = repRange
         self.sets = sets
-        self.baseIncrement = baseIncrement
-        self.rounding = rounding
-        self.microAdjustStep = microAdjustStep
-        self.weeklyCapPct = weeklyCapPct
+        self.incrementPerSide = incrementPerSide
         self.plateOptions = plateOptions
-        self.warmupRule = warmupRule
         self.defaultRestSec = defaultRestSec
     }
 }
@@ -256,32 +244,20 @@ public struct SessionStats: Codable, Sendable {
 
 // MARK: - Workout System Models
 
-/// STEEL configuration for a specific lift
+/// STEEL configuration for a specific lift (simplified)
 public struct SteelConfig: Codable, Sendable {
-    public let repRange: ClosedRange<Int>      // e.g., 8...12
-    public let baseIncrement: Double           // Total load step
-    public let rounding: Double                // Round to nearest X
-    public let microAdjustStep: Double?        // Optional micro-loading
-    public let weeklyCapPct: Double            // 5-10%
+    public let repRange: ClosedRange<Int>      // e.g., 8...12 (for display, always target middle)
+    public let incrementPerSide: Double        // 5lb per side for everything
     public let plateOptions: [Double]?         // For barbells: [45, 25, 10, 5, 2.5]
-    public let warmupRule: String              // "ramped_2" etc.
 
     public init(
         repRange: ClosedRange<Int>,
-        baseIncrement: Double,
-        rounding: Double,
-        microAdjustStep: Double? = nil,
-        weeklyCapPct: Double,
-        plateOptions: [Double]? = nil,
-        warmupRule: String = "ramped_2"
+        incrementPerSide: Double = 5.0,
+        plateOptions: [Double]? = nil
     ) {
         self.repRange = repRange
-        self.baseIncrement = baseIncrement
-        self.rounding = rounding
-        self.microAdjustStep = microAdjustStep
-        self.weeklyCapPct = weeklyCapPct
+        self.incrementPerSide = incrementPerSide
         self.plateOptions = plateOptions
-        self.warmupRule = warmupRule
     }
 }
 

@@ -578,23 +578,10 @@ public class SessionManager {
 
         currentExerciseLog?.setLogs.append(setLog)
 
-        // Check for bad-day switch
-        if SteelProgressionEngine.shouldActivateBadDaySwitch(setLogs: currentExerciseLog?.setLogs ?? []) {
-            applyBadDaySwitch()
-        }
-
-        // Compute next prescription using S.T.E.E.L. micro-adjust
-        let result = SteelProgressionEngine.microAdjust(
-            currentWeight: currentWeight,
-            achievedReps: reps,
-            repRange: profile.repRange,
-            rating: rating,
-            baseIncrement: profile.baseIncrement,
-            microAdjustStep: profile.microAdjustStep,
-            rounding: profile.rounding
-        )
-
-        nextPrescription = (reps: result.nextReps, weight: result.nextWeight)
+        // Simplified STEEL: constant reps (middle of range) and weight throughout exercise
+        // No within-session adjustments - ratings only affect next session's starting weight
+        let targetReps = (profile.repRange.lowerBound + profile.repRange.upperBound) / 2
+        nextPrescription = (reps: targetReps, weight: currentWeight)
 
         // Move to rest
         currentSetIndex += 1
@@ -664,7 +651,8 @@ public class SessionManager {
 
     public func finishExercise() {
         guard var exerciseLog = currentExerciseLog,
-              let profile = exerciseProfiles[exerciseLog.exerciseId] else { return }
+              let profile = exerciseProfiles[exerciseLog.exerciseId],
+              let exercise = currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }) else { return }
 
         // Compute decision
         let decision = SteelProgressionEngine.computeDecision(
@@ -675,25 +663,13 @@ public class SessionManager {
 
         exerciseLog.sessionDecision = decision
 
-        // Compute next session start weight
-        let recentLoads = getRecentLoads(exerciseId: exerciseLog.exerciseId)
-
-        // Package profile config as SteelConfig
-        let steelConfig = SteelConfig(
-            repRange: profile.repRange,
-            baseIncrement: profile.baseIncrement,
-            rounding: profile.rounding,
-            microAdjustStep: profile.microAdjustStep,
-            weeklyCapPct: profile.weeklyCapPct,
-            plateOptions: profile.plateOptions,
-            warmupRule: profile.warmupRule
-        )
-
+        // Compute next session start weight (simplified)
         let result = SteelProgressionEngine.computeNextSessionWeight(
             lastStartLoad: exerciseLog.startWeight,
             decision: decision,
-            config: steelConfig,
-            recentLoads: recentLoads
+            incrementPerSide: profile.incrementPerSide,
+            equipment: profile.equipment,
+            plateOptions: profile.plateOptions
         )
 
         exerciseLog.nextStartWeight = result.startWeight
@@ -787,25 +763,9 @@ public class SessionManager {
         guard let exerciseLog = currentExerciseLog,
               let profile = exerciseProfiles[exerciseLog.exerciseId] else { return }
 
-        nextPrescription = (
-            reps: profile.repRange.upperBound,  // Prescribe max reps to aim for
-            weight: exerciseLog.startWeight
-        )
-    }
-
-    private func applyBadDaySwitch() {
-        guard let exerciseLog = currentExerciseLog,
-              let profile = exerciseProfiles[exerciseLog.exerciseId],
-              let currentWeight = nextPrescription?.weight else { return }
-
-        let result = SteelProgressionEngine.applyBadDayAdjustment(
-            currentWeight: currentWeight,
-            baseIncrement: profile.baseIncrement,
-            rounding: profile.rounding,
-            repRange: profile.repRange
-        )
-
-        nextPrescription = (reps: result.nextReps, weight: result.nextWeight)
+        // Set initial prescription: middle of rep range, starting weight
+        let targetReps = (profile.repRange.lowerBound + profile.repRange.upperBound) / 2
+        nextPrescription = (reps: targetReps, weight: exerciseLog.startWeight)
     }
 
     private func getRecentLoads(exerciseId: String) -> [Double] {

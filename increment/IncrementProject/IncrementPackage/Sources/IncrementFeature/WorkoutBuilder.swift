@@ -24,7 +24,7 @@ struct WorkoutBuilder {
 
     private static func buildPushDay() -> WorkoutTemplate {
         let exercises: [WorkoutExercise] = [
-            // Core lifts (2)
+            // Core lifts: 3x8
             WorkoutExercise(
                 lift: LiftLibrary.benchPress,
                 order: 1,
@@ -39,19 +39,19 @@ struct WorkoutBuilder {
                 targetSets: 3,
                 restTime: 150
             ),
-            // Accessory lifts (2)
+            // Accessory lifts: 4x10-12
             WorkoutExercise(
                 lift: LiftLibrary.cableFly,
                 order: 3,
                 priority: .accessory,
-                targetSets: 3,
+                targetSets: 4,
                 restTime: 90
             ),
             WorkoutExercise(
                 lift: LiftLibrary.tricepPushdown,
                 order: 4,
                 priority: .accessory,
-                targetSets: 3,
+                targetSets: 4,
                 restTime: 90
             )
         ]
@@ -68,7 +68,7 @@ struct WorkoutBuilder {
 
     private static func buildPullDay() -> WorkoutTemplate {
         let exercises: [WorkoutExercise] = [
-            // Core lifts (2)
+            // Core lifts: 3x8
             WorkoutExercise(
                 lift: LiftLibrary.pullups,
                 order: 1,
@@ -83,19 +83,19 @@ struct WorkoutBuilder {
                 targetSets: 3,
                 restTime: 150
             ),
-            // Accessory lifts (2)
+            // Accessory lifts: 4x10-12
             WorkoutExercise(
                 lift: LiftLibrary.latPulldown,
                 order: 3,
                 priority: .accessory,
-                targetSets: 3,
+                targetSets: 4,
                 restTime: 120
             ),
             WorkoutExercise(
                 lift: LiftLibrary.dumbbellCurl,
                 order: 4,
                 priority: .accessory,
-                targetSets: 3,
+                targetSets: 4,
                 restTime: 90
             )
         ]
@@ -112,12 +112,12 @@ struct WorkoutBuilder {
 
     private static func buildLegDay() -> WorkoutTemplate {
         let exercises: [WorkoutExercise] = [
-            // Core lifts (2)
+            // Core lifts: 3x8
             WorkoutExercise(
                 lift: LiftLibrary.squat,
                 order: 1,
                 priority: .core,
-                targetSets: 4,
+                targetSets: 3,
                 restTime: 180
             ),
             WorkoutExercise(
@@ -127,12 +127,12 @@ struct WorkoutBuilder {
                 targetSets: 3,
                 restTime: 150
             ),
-            // Accessory lifts (2)
+            // Accessory lifts: 4x10-12
             WorkoutExercise(
                 lift: LiftLibrary.legPress,
                 order: 3,
                 priority: .accessory,
-                targetSets: 3,
+                targetSets: 4,
                 restTime: 120
             ),
             WorkoutExercise(
