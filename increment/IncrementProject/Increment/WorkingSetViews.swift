@@ -25,7 +25,8 @@ struct WorkingSetView: View {
                             plates: plateOptions,
                             barWeight: 45.0
                         )
-                    }
+                    },
+                    equipment: profile.equipment
                 )
 
                 // Content panel
@@ -95,23 +96,32 @@ struct WorkingSetView: View {
 @MainActor
 struct RestView: View {
     @Environment(SessionManager.self) private var sessionManager
+    @Environment(UserSettings.self) private var settings
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
 
-            if let prescription = sessionManager.nextPrescription,
-               case .rest(let timeRemaining) = sessionManager.sessionState {
+            if case .rest(let timeRemaining) = sessionManager.sessionState {
                 VStack(spacing: 24) {
-                    // Next prescription
-                    VStack(spacing: 8) {
-                        Text("Next:")
-                            .font(.system(.body, design: .monospaced))
-                            .opacity(0.7)
+                    // Only show next prescription if there are more sets in this exercise
+                    if let exerciseLog = sessionManager.currentExerciseLog,
+                       let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId],
+                       sessionManager.currentSetIndex < profile.sets,
+                       let prescription = sessionManager.nextPrescription {
+                        // Next prescription
+                        VStack(spacing: 8) {
+                            Text("Next:")
+                                .font(.system(.body, design: .monospaced))
+                                .opacity(0.7)
 
-                        Text("\(prescription.reps) × \(Int(prescription.weight)) lb")
-                            .font(.system(.title, design: .monospaced))
-                            .fontWeight(.bold)
+                            // Format with user's preferred unit
+                            let isDumbbell = profile.equipment == .dumbbell
+                            let formattedWeight = settings.weightUnit.formatted(prescription.weight, isDumbbell: isDumbbell)
+                            Text("\(prescription.reps) × \(formattedWeight)")
+                                .font(.system(.title, design: .monospaced))
+                                .fontWeight(.bold)
+                        }
                     }
 
                     // Rest timer

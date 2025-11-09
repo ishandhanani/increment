@@ -2,6 +2,8 @@ import Foundation
 
 /// Central repository for all lift definitions
 /// Organized by workout category (Push, Pull, Legs, Cardio)
+/// Core lifts: 3x8, Accessory lifts: 4x10-12
+/// All weight changes: 5lb per side
 struct LiftLibrary {
 
     // MARK: - Push Lifts
@@ -13,11 +15,8 @@ struct LiftLibrary {
         equipment: .barbell,
         muscleGroups: [.chest, .triceps, .shoulders],
         steelConfig: SteelConfig(
-            repRange: 5...8,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 5.0,
+            repRange: 8...8,  // Core lift: constant 8 reps
+            incrementPerSide: 5.0,
             plateOptions: [45, 25, 10, 5, 2.5]
         )
     )
@@ -29,11 +28,8 @@ struct LiftLibrary {
         equipment: .dumbbell,
         muscleGroups: [.chest, .shoulders],
         steelConfig: SteelConfig(
-            repRange: 8...12,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 7.0
+            repRange: 8...8,  // Core lift: constant 8 reps
+            incrementPerSide: 5.0
         )
     )
 
@@ -44,11 +40,8 @@ struct LiftLibrary {
         equipment: .cable,
         muscleGroups: [.chest],
         steelConfig: SteelConfig(
-            repRange: 10...15,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 7.0
+            repRange: 10...12,  // Accessory lift
+            incrementPerSide: 5.0
         )
     )
 
@@ -59,11 +52,8 @@ struct LiftLibrary {
         equipment: .cable,
         muscleGroups: [.triceps],
         steelConfig: SteelConfig(
-            repRange: 10...15,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 7.0
+            repRange: 10...12,  // Accessory lift
+            incrementPerSide: 5.0
         )
     )
 
@@ -74,11 +64,8 @@ struct LiftLibrary {
         equipment: .barbell,
         muscleGroups: [.triceps],
         steelConfig: SteelConfig(
-            repRange: 8...12,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 5.0
+            repRange: 10...12,  // Accessory lift
+            incrementPerSide: 5.0
         )
     )
 
@@ -91,11 +78,8 @@ struct LiftLibrary {
         equipment: .bodyweight,
         muscleGroups: [.back, .biceps],
         steelConfig: SteelConfig(
-            repRange: 5...8,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 5.0
+            repRange: 8...8,  // Core lift: constant 8 reps
+            incrementPerSide: 5.0
         )
     )
 
@@ -106,11 +90,8 @@ struct LiftLibrary {
         equipment: .machine,
         muscleGroups: [.back],
         steelConfig: SteelConfig(
-            repRange: 8...12,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 7.0
+            repRange: 10...12,  // Accessory lift
+            incrementPerSide: 5.0
         )
     )
 
@@ -121,11 +102,8 @@ struct LiftLibrary {
         equipment: .barbell,
         muscleGroups: [.back, .biceps],
         steelConfig: SteelConfig(
-            repRange: 6...10,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 5.0,
+            repRange: 8...8,  // Core lift: constant 8 reps
+            incrementPerSide: 5.0,
             plateOptions: [45, 25, 10, 5, 2.5]
         )
     )
@@ -137,11 +115,8 @@ struct LiftLibrary {
         equipment: .dumbbell,
         muscleGroups: [.biceps],
         steelConfig: SteelConfig(
-            repRange: 10...15,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 7.0
+            repRange: 10...12,  // Accessory lift
+            incrementPerSide: 5.0
         )
     )
 
@@ -152,11 +127,8 @@ struct LiftLibrary {
         equipment: .dumbbell,
         muscleGroups: [.biceps],
         steelConfig: SteelConfig(
-            repRange: 10...15,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 7.0
+            repRange: 10...12,  // Accessory lift
+            incrementPerSide: 5.0
         )
     )
 
@@ -169,11 +141,8 @@ struct LiftLibrary {
         equipment: .barbell,
         muscleGroups: [.quads, .glutes, .hamstrings],
         steelConfig: SteelConfig(
-            repRange: 5...8,
-            baseIncrement: 10.0,
-            rounding: 5.0,
-            microAdjustStep: 5.0,
-            weeklyCapPct: 10.0,
+            repRange: 8...8,  // Core lift: constant 8 reps
+            incrementPerSide: 5.0,
             plateOptions: [45, 25, 10, 5, 2.5]
         )
     )
@@ -185,11 +154,8 @@ struct LiftLibrary {
         equipment: .dumbbell,
         muscleGroups: [.quads, .glutes],
         steelConfig: SteelConfig(
-            repRange: 8...12,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 7.0
+            repRange: 8...8,  // Core lift: constant 8 reps
+            incrementPerSide: 5.0
         )
     )
 
@@ -200,11 +166,8 @@ struct LiftLibrary {
         equipment: .machine,
         muscleGroups: [.quads, .glutes],
         steelConfig: SteelConfig(
-            repRange: 10...15,
-            baseIncrement: 10.0,
-            rounding: 5.0,
-            microAdjustStep: 5.0,
-            weeklyCapPct: 10.0
+            repRange: 10...12,  // Accessory lift
+            incrementPerSide: 5.0
         )
     )
 
@@ -215,11 +178,8 @@ struct LiftLibrary {
         equipment: .machine,
         muscleGroups: [.calves],
         steelConfig: SteelConfig(
-            repRange: 12...20,
-            baseIncrement: 5.0,
-            rounding: 2.5,
-            microAdjustStep: 2.5,
-            weeklyCapPct: 7.0
+            repRange: 10...12,  // Accessory lift
+            incrementPerSide: 5.0
         )
     )
 
@@ -233,9 +193,7 @@ struct LiftLibrary {
         muscleGroups: [.core],
         steelConfig: SteelConfig(
             repRange: 1...1,
-            baseIncrement: 0,
-            rounding: 1.0,
-            weeklyCapPct: 0
+            incrementPerSide: 0
         )
     )
 
@@ -247,9 +205,7 @@ struct LiftLibrary {
         muscleGroups: [.back, .core],
         steelConfig: SteelConfig(
             repRange: 1...1,
-            baseIncrement: 0,
-            rounding: 1.0,
-            weeklyCapPct: 0
+            incrementPerSide: 0
         )
     )
 

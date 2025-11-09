@@ -63,10 +63,7 @@ public struct CalibrationEngine {
 
         if isMainLift {
             // Main compound lift - use 70% of 1RM
-            return SteelProgressionEngine.calculateStartingWeight(
-                from: mainLift1RM,
-                rounding: lift.steelConfig.rounding
-            )
+            return SteelProgressionEngine.calculateStartingWeight(from: mainLift1RM)
         } else {
             // Accessory lift - estimate based on equipment type
             let estimated1RM = SteelProgressionEngine.estimate1RMForAccessory(
@@ -75,10 +72,7 @@ public struct CalibrationEngine {
                 category: lift.category
             )
 
-            return SteelProgressionEngine.calculateStartingWeight(
-                from: estimated1RM,
-                rounding: lift.steelConfig.rounding
-            )
+            return SteelProgressionEngine.calculateStartingWeight(from: estimated1RM)
         }
     }
 

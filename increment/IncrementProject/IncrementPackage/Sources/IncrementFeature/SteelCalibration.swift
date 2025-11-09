@@ -59,19 +59,12 @@ public struct SteelCalibration {
         return default1RMs[exerciseId]
     }
 
-    /// Calculate starting weight from user-provided 1RM
+    /// Calculate starting weight from user-provided 1RM (simplified)
     /// - Parameters:
     ///   - oneRepMax: User's tested or estimated 1RM
-    ///   - equipment: Equipment type for the exercise
-    ///   - config: STEEL configuration for rounding
-    /// - Returns: Appropriate starting weight (70% of 1RM, rounded)
-    public static func calculateStartingWeight(
-        from oneRepMax: Double,
-        equipment: Equipment,
-        config: SteelConfig
-    ) -> Double {
-        let strategy = SteelProgressionStrategyFactory.strategy(for: equipment)
-        return strategy.getStartingWeight(from: oneRepMax, config: config)
+    /// - Returns: Appropriate starting weight (70% of 1RM, rounded to 5lb)
+    public static func calculateStartingWeight(from oneRepMax: Double) -> Double {
+        return SteelProgressionEngine.calculateStartingWeight(from: oneRepMax)
     }
 
     /// Generate initial exercise states for all exercises in a workout template
@@ -88,8 +81,6 @@ public struct SteelCalibration {
 
         for exercise in template.exercises {
             let exerciseId = exercise.lift.id
-            let equipment = exercise.lift.equipment
-            let config = exercise.lift.steelConfig
 
             // Determine starting weight
             let startWeight: Double
@@ -97,11 +88,11 @@ public struct SteelCalibration {
             // Check if user provided 1RM for this lift category
             if let input = calibrationInput {
                 if exerciseId.contains("bench") || exerciseId.contains("incline"), let benchRM = input.benchPress1RM {
-                    startWeight = calculateStartingWeight(from: benchRM, equipment: equipment, config: config)
+                    startWeight = calculateStartingWeight(from: benchRM)
                 } else if exerciseId.contains("squat"), let squatRM = input.squat1RM {
-                    startWeight = calculateStartingWeight(from: squatRM, equipment: equipment, config: config)
+                    startWeight = calculateStartingWeight(from: squatRM)
                 } else if exerciseId.contains("deadlift"), let deadliftRM = input.deadlift1RM {
-                    startWeight = calculateStartingWeight(from: deadliftRM, equipment: equipment, config: config)
+                    startWeight = calculateStartingWeight(from: deadliftRM)
                 } else {
                     // Fall back to default
                     startWeight = getDefaultStartingWeight(for: exerciseId)

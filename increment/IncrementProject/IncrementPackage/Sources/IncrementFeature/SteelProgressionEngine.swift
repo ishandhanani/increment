@@ -1,7 +1,8 @@
 import Foundation
 
-/// S.T.E.E.L.™ Progression Engine
-/// Set-to-set Tuning + End-of-exercise Escalation/Lowering
+/// S.T.E.E.L.™ Progression Engine (Simplified)
+/// Core lifts: 3x8, Accessory lifts: 4x10-12
+/// Weight changes: 5lb per side only
 public class SteelProgressionEngine {
 
     // MARK: - Warmup Prescription
@@ -45,189 +46,100 @@ public class SteelProgressionEngine {
         )
     }
 
-    // MARK: - Within-Session Micro-Adjust (4B)
-
-    public struct MicroAdjustResult {
-        public let nextWeight: Double
-        public let nextReps: Int
-    }
-
-    /// Computes next set prescription based on current performance
-    /// Adjusted for real-world training patterns with smarter progression/regression
-    public static func microAdjust(
-        currentWeight: Double,
-        achievedReps: Int,
-        repRange: ClosedRange<Int>,
-        rating: Rating,
-        baseIncrement: Double,
-        microAdjustStep: Double?,
-        rounding: Double
-    ) -> MicroAdjustResult {
-        let rMin = repRange.lowerBound
-        let rMax = repRange.upperBound
-        let micro = microAdjustStep ?? 0
-
-        switch rating {
-        case .fail:
-            // Complete failure - significant weight reduction
-            // Drop by full base increment to ensure recovery
-            let nextWeight = round(max(0, currentWeight - baseIncrement), to: rounding)
-            return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
-
-        case .holyShit:
-            // Struggled badly - conservative approach
-            if achievedReps < rMin {
-                // Didn't even hit minimum - drop weight significantly
-                let nextWeight = round(max(0, currentWeight - baseIncrement), to: rounding)
-                return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
-            } else if achievedReps <= rMin + 1 {
-                // Just barely hit minimum - drop by micro if available
-                if micro > 0 {
-                    let nextWeight = round(max(0, currentWeight - micro), to: rounding)
-                    return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
-                }
-            }
-            // Hit reps but it was very hard - maintain weight
-            return MicroAdjustResult(nextWeight: currentWeight, nextReps: clamp(achievedReps, rMin, rMax))
-
-        case .hard:
-            // Challenging but doable - maintain or small adjustment
-            if achievedReps < rMin {
-                // Didn't hit minimum - drop by micro if available, else base
-                let dropAmount = micro > 0 ? micro : baseIncrement
-                let nextWeight = round(max(0, currentWeight - dropAmount), to: rounding)
-                return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMin)
-            } else if achievedReps == rMin {
-                // Hit exactly minimum - maintain weight, stay at minimum reps
-                return MicroAdjustResult(nextWeight: currentWeight, nextReps: rMin)
-            } else {
-                // Hit above minimum - maintain weight, aim for same reps achieved
-                return MicroAdjustResult(nextWeight: currentWeight, nextReps: clamp(achievedReps, rMin, rMax))
-            }
-
-        case .easy:
-            // Felt easy - add weight if hitting upper range
-            if achievedReps >= rMax {
-                // Hit top of range and felt easy - add micro load if available
-                if micro > 0 {
-                    let nextWeight = round(currentWeight + micro, to: rounding)
-                    return MicroAdjustResult(nextWeight: nextWeight, nextReps: rMax)
-                } else {
-                    // No micro available - maintain weight, aim for more reps next time
-                    return MicroAdjustResult(nextWeight: currentWeight, nextReps: rMax)
-                }
-            } else if achievedReps >= rMax - 1 {
-                // Close to top - maintain weight, push for max reps
-                return MicroAdjustResult(nextWeight: currentWeight, nextReps: rMax)
-            } else {
-                // Mid-range - maintain weight, aim for achieved reps
-                return MicroAdjustResult(nextWeight: currentWeight, nextReps: clamp(achievedReps, rMin, rMax))
-            }
-        }
-    }
-
-    /// Bad-Day Switch: Check if first two working sets are red
-    public static func shouldActivateBadDaySwitch(setLogs: [SetLog]) -> Bool {
-        guard setLogs.count >= 2 else { return false }
-        let firstTwo = Array(setLogs.prefix(2))
-        return firstTwo.allSatisfy { $0.rating == .fail || $0.rating == .holyShit }
-    }
-
-    /// Apply bad-day adjustment (drop by base increment, target min reps)
-    public static func applyBadDayAdjustment(
-        currentWeight: Double,
-        baseIncrement: Double,
-        rounding: Double,
-        repRange: ClosedRange<Int>
-    ) -> MicroAdjustResult {
-        let nextWeight = round(max(0, currentWeight - baseIncrement), to: rounding)
-        return MicroAdjustResult(nextWeight: nextWeight, nextReps: repRange.lowerBound)
-    }
-
-    // MARK: - End-of-Exercise Decision (4C)
+    // MARK: - End-of-Exercise Decision (Simplified)
 
     /// Computes session decision based on all set logs
+    /// Simple rules:
+    /// - All EASY → add weight
+    /// - Any FAIL/HOLY_SHIT → reduce weight
+    /// - Otherwise → hold
     public static func computeDecision(
         setLogs: [SetLog],
         repRange: ClosedRange<Int>,
         totalSets: Int
     ) -> SessionDecision {
-        let rMin = repRange.lowerBound
-        let rMax = repRange.upperBound
+        // Count ratings
+        let easyCount = setLogs.filter { $0.rating == .easy }.count
+        let hardCount = setLogs.filter { $0.rating == .hard }.count
+        let struggledCount = setLogs.filter { $0.rating == .holyShit || $0.rating == .fail }.count
 
-        // Counters
-        let S_red = setLogs.filter { $0.rating == .holyShit || $0.rating == .fail }.count
-        let S_hit_top = setLogs.filter { $0.achievedReps >= rMax && $0.rating != .holyShit }.count
-        let S_meet = setLogs.filter { $0.achievedReps >= rMin && $0.rating != .fail }.count
-        let S_easyTop = setLogs.filter { $0.achievedReps >= rMax && $0.rating == .easy }.count
-
-        // All sets at max reps?
-        let allAtMax = setLogs.allSatisfy { $0.achievedReps >= rMax }
-
-        // Decision logic
-        if allAtMax && S_easyTop >= totalSets / 2 {
-            return .up_2
-        } else if S_meet == totalSets && S_red == 0 && S_hit_top >= totalSets - 1 {
-            return .up_1
-        } else if S_red >= 2 || S_meet < totalSets - 1 {
+        // Simple decision logic
+        if struggledCount > 0 {
+            // Any failure or major struggle → reduce weight
             return .down_1
+        } else if easyCount == totalSets {
+            // All sets felt easy → add weight
+            return .up_1
         } else {
+            // Mix of easy and hard, or all hard → maintain weight
             return .hold
         }
     }
 
-    // MARK: - Next-Session Start Weight (4D)
+    // MARK: - Next-Session Start Weight (Simplified)
 
     public struct NextSessionResult {
         public let startWeight: Double
         public let reason: String
     }
 
-    /// Computes next session's start weight with rounding, weekly cap, and plate math
+    /// Computes next session's start weight
+    /// Simple rules:
+    /// - up_1: add 5lb per side (10lb for barbell, 5lb for dumbbell)
+    /// - down_1: subtract 5lb per side
+    /// - hold: maintain weight
     public static func computeNextSessionWeight(
         lastStartLoad: Double,
         decision: SessionDecision,
-        config: SteelConfig,
-        recentLoads: [Double]  // Loads from last 7 days
+        incrementPerSide: Double,
+        equipment: Equipment,
+        plateOptions: [Double]?
     ) -> NextSessionResult {
-        var W0 = lastStartLoad
+        var nextWeight = lastStartLoad
+        var reason = ""
+
+        // Calculate total increment based on equipment
+        let totalIncrement: Double
+        switch equipment {
+        case .barbell:
+            // 5lb per side = 10lb total
+            totalIncrement = incrementPerSide * 2
+        case .dumbbell:
+            // 5lb per dumbbell
+            totalIncrement = incrementPerSide
+        case .cable, .machine, .bodyweight, .cardioMachine:
+            // 5lb total
+            totalIncrement = incrementPerSide
+        }
 
         // Apply decision
         switch decision {
         case .up_2:
-            W0 += 2 * config.baseIncrement
+            // Not used in simplified version, treat as up_1
+            nextWeight += totalIncrement
+            reason = "All sets felt easy"
         case .up_1:
-            W0 += config.baseIncrement
+            nextWeight += totalIncrement
+            reason = "All sets felt easy"
         case .down_1:
-            W0 -= config.baseIncrement
+            nextWeight -= totalIncrement
+            reason = "Struggled on one or more sets"
         case .hold:
-            break
+            reason = "Maintaining current load"
         }
 
-        // Round
-        W0 = round(W0, to: config.rounding)
+        // Round to 5lb increments for all equipment
+        nextWeight = round(nextWeight, to: 5.0)
 
-        // Weekly cap check
-        let weeklyIncrease = W0 - (recentLoads.min() ?? lastStartLoad)
-        let maxAllowedIncrease = lastStartLoad * (config.weeklyCapPct / 100.0)
-
-        var reason = decisionReason(decision)
-
-        if weeklyIncrease > maxAllowedIncrease {
-            W0 = lastStartLoad + maxAllowedIncrease
-            W0 = round(W0, to: config.rounding)
-            reason = "Weekly cap applied"
+        // Plate math for barbells (ensure achievable with available plates)
+        if equipment == .barbell, let plates = plateOptions {
+            nextWeight = roundToPlates(nextWeight, plates: plates, barWeight: 45.0)
         }
 
-        // Plate math for barbells
-        if let plates = config.plateOptions {
-            W0 = roundToPlates(W0, plates: plates, barWeight: 45.0)
-        }
+        // Floor at 0 or minimum weight
+        nextWeight = max(equipment == .barbell ? 45.0 : 0.0, nextWeight)
 
-        // Floor at 0
-        W0 = max(0, W0)
-
-        return NextSessionResult(startWeight: W0, reason: reason)
+        return NextSessionResult(startWeight: nextWeight, reason: reason)
     }
 
     // MARK: - Plate Math
@@ -277,37 +189,16 @@ public class SteelProgressionEngine {
         return (value / rounding).rounded() * rounding
     }
 
-    private static func clamp(_ value: Int, _ min: Int, _ max: Int) -> Int {
-        return Swift.min(Swift.max(value, min), max)
-    }
-
-    private static func decisionReason(_ decision: SessionDecision) -> String {
-        switch decision {
-        case .up_2:
-            return "All sets at top range, felt easy"
-        case .up_1:
-            return "Hit targets, no failures"
-        case .down_1:
-            return "Multiple red sets or missed targets"
-        case .hold:
-            return "Maintaining current load"
-        }
-    }
-
     // MARK: - 1RM Calibration
 
     /// Calculates starting weight for an exercise based on 1RM
     /// Uses 70% of 1RM as starting point for optimal progression
     /// - Parameters:
     ///   - oneRepMax: User's estimated or tested 1RM
-    ///   - rounding: Rounding increment from exercise profile
-    /// - Returns: Starting weight rounded appropriately
-    public static func calculateStartingWeight(
-        from oneRepMax: Double,
-        rounding: Double
-    ) -> Double {
+    /// - Returns: Starting weight rounded to 5lb
+    public static func calculateStartingWeight(from oneRepMax: Double) -> Double {
         let startingWeight = oneRepMax * 0.70
-        return round(startingWeight, to: rounding)
+        return round(startingWeight, to: 5.0)
     }
 
     /// Estimates 1RM for accessory/isolation exercises based on main lift 1RM

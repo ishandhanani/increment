@@ -2,8 +2,8 @@ import Foundation
 
 // MARK: - STEEL Progression Protocol
 
-/// Protocol defining equipment-specific STEEL progression behavior
-/// Each equipment type can have unique warmup rules, increment patterns, and calibration
+/// Protocol defining equipment-specific STEEL progression behavior (simplified)
+/// Each equipment type can have unique warmup rules
 protocol SteelProgressionStrategy: Sendable {
     /// Equipment type this strategy handles
     var equipmentType: Equipment { get }
@@ -15,12 +15,6 @@ protocol SteelProgressionStrategy: Sendable {
         exerciseIndex: Int,
         config: SteelConfig
     ) -> SteelProgressionEngine.WarmupPrescription
-
-    /// Validate and round weight to equipment-specific increments
-    func roundWeight(_ weight: Double, config: SteelConfig) -> Double
-
-    /// Get default starting weight for calibration (70% of 1RM)
-    func getStartingWeight(from oneRepMax: Double, config: SteelConfig) -> Double
 
     /// Get recommended initial 1RM for beginner calibration
     func getBeginnerCalibration() -> Double?
@@ -89,18 +83,6 @@ struct BarbellProgressionStrategy: SteelProgressionStrategy {
         return SteelProgressionEngine.WarmupPrescription(sets: sets, needsWarmup: !sets.isEmpty)
     }
 
-    func roundWeight(_ weight: Double, config: SteelConfig) -> Double {
-        if let plates = config.plateOptions {
-            return SteelProgressionEngine.roundToPlates(weight, plates: plates, barWeight: 45.0)
-        }
-        return (weight / config.rounding).rounded() * config.rounding
-    }
-
-    func getStartingWeight(from oneRepMax: Double, config: SteelConfig) -> Double {
-        let startWeight = oneRepMax * 0.70
-        return roundWeight(startWeight, config: config)
-    }
-
     func getBeginnerCalibration() -> Double? {
         // Default beginner 1RMs for common barbell lifts
         // These are conservative starting points
@@ -124,8 +106,8 @@ struct DumbbellProgressionStrategy: SteelProgressionStrategy {
             return SteelProgressionEngine.WarmupPrescription(sets: [], needsWarmup: false)
         }
 
-        // Single warmup set at ~70% of working weight
-        let warmupWeight = roundWeight(workingWeight * 0.70, config: config)
+        // Single warmup set at ~70% of working weight, rounded to 5lb
+        let warmupWeight = (workingWeight * 0.70 / 5.0).rounded(.down) * 5.0
 
         let set = SteelProgressionEngine.WarmupPrescription.WarmupSet(
             weight: warmupWeight,
@@ -134,18 +116,6 @@ struct DumbbellProgressionStrategy: SteelProgressionStrategy {
         )
 
         return SteelProgressionEngine.WarmupPrescription(sets: [set], needsWarmup: true)
-    }
-
-    func roundWeight(_ weight: Double, config: SteelConfig) -> Double {
-        // Dumbbells typically available in 5lb increments
-        // Round down to available dumbbell weight
-        return (weight / 5.0).rounded(.down) * 5.0
-    }
-
-    func getStartingWeight(from oneRepMax: Double, config: SteelConfig) -> Double {
-        // Dumbbells use ~40% of barbell 1RM per hand
-        let startWeight = (oneRepMax * 0.40) * 0.70
-        return roundWeight(startWeight, config: config)
     }
 
     func getBeginnerCalibration() -> Double? {
@@ -169,8 +139,8 @@ struct MachineProgressionStrategy: SteelProgressionStrategy {
             return SteelProgressionEngine.WarmupPrescription(sets: [], needsWarmup: false)
         }
 
-        // Single warmup at 60% of working weight
-        let warmupWeight = roundWeight(workingWeight * 0.60, config: config)
+        // Single warmup at 60% of working weight, rounded to 5lb
+        let warmupWeight = (workingWeight * 0.60 / 5.0).rounded() * 5.0
 
         let set = SteelProgressionEngine.WarmupPrescription.WarmupSet(
             weight: warmupWeight,
@@ -179,17 +149,6 @@ struct MachineProgressionStrategy: SteelProgressionStrategy {
         )
 
         return SteelProgressionEngine.WarmupPrescription(sets: [set], needsWarmup: true)
-    }
-
-    func roundWeight(_ weight: Double, config: SteelConfig) -> Double {
-        // Machines vary, but typically 5-10lb increments
-        return (weight / config.rounding).rounded() * config.rounding
-    }
-
-    func getStartingWeight(from oneRepMax: Double, config: SteelConfig) -> Double {
-        // Machines use ~60% of barbell 1RM
-        let startWeight = (oneRepMax * 0.60) * 0.70
-        return roundWeight(startWeight, config: config)
     }
 
     func getBeginnerCalibration() -> Double? {
@@ -213,17 +172,6 @@ struct BodyweightProgressionStrategy: SteelProgressionStrategy {
         return SteelProgressionEngine.WarmupPrescription(sets: [], needsWarmup: false)
     }
 
-    func roundWeight(_ weight: Double, config: SteelConfig) -> Double {
-        // For weighted bodyweight (e.g., dip belt), round to available plates
-        return (weight / config.rounding).rounded() * config.rounding
-    }
-
-    func getStartingWeight(from oneRepMax: Double, config: SteelConfig) -> Double {
-        // For bodyweight, starting weight is added weight (belt/vest)
-        // Start with no added weight (bodyweight only)
-        return 0.0
-    }
-
     func getBeginnerCalibration() -> Double? {
         return 0.0  // Start with bodyweight only
     }
@@ -245,8 +193,8 @@ struct CableProgressionStrategy: SteelProgressionStrategy {
             return SteelProgressionEngine.WarmupPrescription(sets: [], needsWarmup: false)
         }
 
-        // If it's a core cable exercise, one light warmup
-        let warmupWeight = roundWeight(workingWeight * 0.60, config: config)
+        // If it's a core cable exercise, one light warmup, rounded to 5lb
+        let warmupWeight = (workingWeight * 0.60 / 5.0).rounded() * 5.0
 
         let set = SteelProgressionEngine.WarmupPrescription.WarmupSet(
             weight: warmupWeight,
@@ -255,17 +203,6 @@ struct CableProgressionStrategy: SteelProgressionStrategy {
         )
 
         return SteelProgressionEngine.WarmupPrescription(sets: [set], needsWarmup: true)
-    }
-
-    func roundWeight(_ weight: Double, config: SteelConfig) -> Double {
-        // Cables typically in 5lb increments
-        return (weight / 5.0).rounded() * 5.0
-    }
-
-    func getStartingWeight(from oneRepMax: Double, config: SteelConfig) -> Double {
-        // Cables use ~50% of barbell 1RM
-        let startWeight = (oneRepMax * 0.50) * 0.70
-        return roundWeight(startWeight, config: config)
     }
 
     func getBeginnerCalibration() -> Double? {
@@ -286,16 +223,6 @@ struct CardioProgressionStrategy: SteelProgressionStrategy {
     ) -> SteelProgressionEngine.WarmupPrescription {
         // Cardio doesn't use warmup sets
         return SteelProgressionEngine.WarmupPrescription(sets: [], needsWarmup: false)
-    }
-
-    func roundWeight(_ weight: Double, config: SteelConfig) -> Double {
-        // Cardio doesn't use weight
-        return 0.0
-    }
-
-    func getStartingWeight(from oneRepMax: Double, config: SteelConfig) -> Double {
-        // Cardio doesn't use weight-based progression
-        return 0.0
     }
 
     func getBeginnerCalibration() -> Double? {

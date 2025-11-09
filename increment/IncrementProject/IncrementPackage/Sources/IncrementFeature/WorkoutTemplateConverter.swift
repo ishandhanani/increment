@@ -14,12 +14,8 @@ struct WorkoutTemplateConverter {
             priority: workoutExercise.priority,
             repRange: lift.steelConfig.repRange,
             sets: workoutExercise.targetSets,
-            baseIncrement: lift.steelConfig.baseIncrement,
-            rounding: lift.steelConfig.rounding,
-            microAdjustStep: lift.steelConfig.microAdjustStep,
-            weeklyCapPct: lift.steelConfig.weeklyCapPct,
+            incrementPerSide: lift.steelConfig.incrementPerSide,
             plateOptions: lift.steelConfig.plateOptions,
-            warmupRule: lift.steelConfig.warmupRule,
             defaultRestSec: Int(workoutExercise.restTime)
         )
     }

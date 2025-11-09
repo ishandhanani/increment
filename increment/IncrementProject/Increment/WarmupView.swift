@@ -9,38 +9,43 @@ struct WarmupView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            if let exerciseLog = sessionManager.currentExerciseLog,
-               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId] {
-                ExerciseHeader(
-                    exerciseName: profile.name,
-                    setInfo: "Warmup",
-                    goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
-                    weight: exerciseLog.startWeight,
-                    plates: profile.plateOptions.map { plateOptions in
-                        SteelProgressionEngine.computePlateBreakdown(
-                            exerciseLog.startWeight,
-                            plates: plateOptions,
-                            barWeight: 45.0
-                        )
-                    }
-                )
-            }
-
             Spacer()
 
-            // Warmup prescription
-            if let prescription = sessionManager.getWarmupPrescription() {
-                VStack(spacing: 16) {
-                    Text("Next warmup:")
-                        .font(.system(.body, design: .monospaced))
-                        .opacity(0.7)
+            if case .warmup(let step) = sessionManager.sessionState,
+               let exerciseLog = sessionManager.currentExerciseLog,
+               let exercise = sessionManager.currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }),
+               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId] {
+                let exerciseIndex = sessionManager.currentSession?.workoutTemplate?.exercises.firstIndex(where: { $0.lift.id == exerciseLog.exerciseId }) ?? 0
+                let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
+                    equipment: exercise.lift.equipment,
+                    workingWeight: exerciseLog.startWeight,
+                    category: exercise.lift.category,
+                    priority: exercise.priority,
+                    exerciseIndex: exerciseIndex,
+                    config: exercise.lift.steelConfig
+                )
 
-                    Text("\(prescription.reps) × \(Int(prescription.weight)) lb")
-                        .font(.system(.title, design: .monospaced))
+                VStack(spacing: 24) {
+                    // Header
+                    Text(profile.name)
+                        .font(.system(.title2, design: .monospaced))
                         .fontWeight(.bold)
+                        .foregroundColor(.white)
+
+                    // Simple step indicator
+                    VStack(spacing: 8) {
+                        Text("Warmup \(step + 1) of \(warmupPrescription.sets.count)")
+                            .font(.system(.title, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+
+                        Text("Grab your weight and complete the set")
+                            .font(.system(.body, design: .monospaced))
+                            .opacity(0.7)
+                            .foregroundColor(.white)
+                    }
                 }
-                .foregroundColor(.white)
+                .padding(24)
             }
 
             Spacer()
@@ -49,8 +54,28 @@ struct WarmupView: View {
             ActionBar {
                 sessionManager.advanceWarmup()
             } label: {
-                Text("NEXT WARMUP WEIGHT »")
+                Text(buttonText)
             }
         }
+    }
+
+    private var buttonText: String {
+        guard case .warmup(let step) = sessionManager.sessionState,
+              let exerciseLog = sessionManager.currentExerciseLog,
+              let exercise = sessionManager.currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }) else {
+            return "NEXT →"
+        }
+
+        let exerciseIndex = sessionManager.currentSession?.workoutTemplate?.exercises.firstIndex(where: { $0.lift.id == exerciseLog.exerciseId }) ?? 0
+        let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
+            equipment: exercise.lift.equipment,
+            workingWeight: exerciseLog.startWeight,
+            category: exercise.lift.category,
+            priority: exercise.priority,
+            exerciseIndex: exerciseIndex,
+            config: exercise.lift.steelConfig
+        )
+
+        return step < warmupPrescription.sets.count - 1 ? "NEXT WARMUP →" : "START WORKING SETS →"
     }
 }

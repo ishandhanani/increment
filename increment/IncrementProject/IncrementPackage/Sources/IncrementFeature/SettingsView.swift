@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 public struct SettingsView: View {
     @Environment(SessionManager.self) private var sessionManager
+    @Environment(UserSettings.self) private var settings
     @Binding var isPresented: Bool
     @State private var showingDiagnostic = false
     @State private var showingCalibration = false
@@ -44,6 +45,14 @@ public struct SettingsView: View {
             // Settings Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    // Preferences Section
+                    SettingsSection(title: "PREFERENCES") {
+                        WeightUnitPicker(selectedUnit: Binding(
+                            get: { settings.weightUnit },
+                            set: { settings.weightUnit = $0 }
+                        ))
+                    }
+
                     // Training Section
                     SettingsSection(title: "TRAINING") {
                         SettingButton(
@@ -225,5 +234,38 @@ struct SettingRow: View {
                 .foregroundColor(.white.opacity(0.7))
         }
         .padding(20)
+    }
+}
+
+// MARK: - Weight Unit Picker
+
+struct WeightUnitPicker: View {
+    @Binding var selectedUnit: WeightUnit
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Weight Unit")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundColor(.white)
+
+                    Text("Choose between pounds or kilograms")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+
+                Spacer()
+
+                Picker("", selection: $selectedUnit) {
+                    ForEach(WeightUnit.allCases, id: \.self) { unit in
+                        Text(unit.rawValue).tag(unit)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 120)
+            }
+            .padding(20)
+        }
     }
 }

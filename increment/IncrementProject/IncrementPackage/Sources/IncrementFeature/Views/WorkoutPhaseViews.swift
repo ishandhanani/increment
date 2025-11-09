@@ -61,31 +61,37 @@ struct WarmupView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            if let exerciseLog = sessionManager.currentExerciseLog,
-               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId] {
-                ExerciseHeader(
-                    exerciseId: profile.name,
-                    setInfo: "Warmup",
-                    goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
-                    weight: exerciseLog.startWeight
-                )
-            }
-
             Spacer()
 
-            // Warmup prescription
-            if let prescription = sessionManager.getWarmupPrescription() {
-                VStack(spacing: 16) {
-                    Text("Next warmup:")
-                        .font(.system(.body, design: .monospaced))
-                        .opacity(0.7)
+            if let exerciseLog = sessionManager.currentExerciseLog,
+               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId],
+               let exercise = sessionManager.currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }),
+               case .warmup(let step) = sessionManager.sessionState {
 
-                    Text("\(prescription.reps) × \(Int(prescription.weight)) lb")
+                let exerciseIndex = sessionManager.currentSession?.workoutTemplate?.exercises.firstIndex(where: { $0.lift.id == exerciseLog.exerciseId }) ?? 0
+                let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
+                    equipment: exercise.lift.equipment,
+                    workingWeight: exerciseLog.startWeight,
+                    category: exercise.lift.category,
+                    priority: exercise.priority,
+                    exerciseIndex: exerciseIndex,
+                    config: exercise.lift.steelConfig
+                )
+
+                VStack(spacing: 24) {
+                    // Header
+                    Text(profile.name)
+                        .font(.system(.title2, design: .monospaced))
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+
+                    // Simple step indicator
+                    Text("Warmup \(step + 1) of \(warmupPrescription.sets.count)")
                         .font(.system(.title, design: .monospaced))
                         .fontWeight(.bold)
+                        .foregroundColor(.white)
                 }
-                .foregroundColor(.white)
+                .padding(24)
             }
 
             Spacer()
@@ -94,9 +100,29 @@ struct WarmupView: View {
             ActionBar {
                 sessionManager.advanceWarmup()
             } label: {
-                Text("NEXT WARMUP WEIGHT »")
+                Text(buttonText)
             }
         }
+    }
+
+    private var buttonText: String {
+        guard case .warmup(let step) = sessionManager.sessionState,
+              let exerciseLog = sessionManager.currentExerciseLog,
+              let exercise = sessionManager.currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }) else {
+            return "NEXT →"
+        }
+
+        let exerciseIndex = sessionManager.currentSession?.workoutTemplate?.exercises.firstIndex(where: { $0.lift.id == exerciseLog.exerciseId }) ?? 0
+        let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
+            equipment: exercise.lift.equipment,
+            workingWeight: exerciseLog.startWeight,
+            category: exercise.lift.category,
+            priority: exercise.priority,
+            exerciseIndex: exerciseIndex,
+            config: exercise.lift.steelConfig
+        )
+
+        return step < warmupPrescription.sets.count - 1 ? "NEXT WARMUP →" : "START WORKING SETS →"
     }
 }
 
@@ -105,77 +131,48 @@ struct WarmupView: View {
 @MainActor
 struct WorkingSetView: View {
     @Environment(SessionManager.self) private var sessionManager
-    @State private var reps: Int = 0
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
             if let exerciseLog = sessionManager.currentExerciseLog,
                let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId],
-               let prescription = sessionManager.nextPrescription {
+               let prescription = sessionManager.nextPrescription,
+               let exercise = sessionManager.currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }) {
                 ExerciseHeader(
                     exerciseId: profile.name,
                     setInfo: "Set \(sessionManager.currentSetIndex + 1)/\(profile.sets)",
                     goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
-                    weight: prescription.weight
+                    weight: prescription.weight,
+                    equipment: exercise.lift.equipment
                 )
-                .onAppear {
-                    // Initialize reps to the prescribed target
-                    if reps == 0 {
-                        reps = prescription.reps
-                    }
-                }
-                .onChange(of: sessionManager.currentSetIndex) { _, _ in
-                    // Reset to prescribed reps when advancing to next set
-                    reps = prescription.reps
-                }
 
-                // Content panel
-                VStack(spacing: 24) {
-                    // Reps input
-                    HStack {
-                        Text("Reps:")
-                            .font(.system(.body, design: .monospaced))
+                Spacer()
 
-                        Stepper("\(reps)", value: $reps, in: 0...20)
-                            .font(.system(.title2, design: .monospaced))
-                            .fontWeight(.bold)
-                    }
-                    .padding(16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    )
-
-                    // Rating buttons (SRCL Action List)
-                    VStack(spacing: 12) {
-                        ForEach(Rating.allCases, id: \.self) { rating in
-                            Button {
-                                sessionManager.logSet(reps: reps, rating: rating)
-                            } label: {
-                                Text(rating.rawValue)
-                                    .font(.system(.body, design: .monospaced))
-                                    .fontWeight(.bold)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(16)
-                                    .background(ratingColor(rating))
-                                    .foregroundColor(.white)
-                                    .cornerRadius(8)
-                            }
+                // Content panel - just feeling buttons
+                VStack(spacing: 12) {
+                    ForEach(Rating.allCases, id: \.self) { rating in
+                        Button {
+                            // Use prescribed reps - user just rates how it felt
+                            sessionManager.logSet(reps: prescription.reps, rating: rating)
+                        } label: {
+                            Text(rating.rawValue)
+                                .font(.system(.body, design: .monospaced))
+                                .fontWeight(.bold)
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(ratingColor(rating))
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
                         }
                     }
                 }
                 .padding(24)
-            }
 
-            Spacer()
+                Spacer()
+            }
         }
         .foregroundColor(.white)
-        .onAppear {
-            if let prescription = sessionManager.nextPrescription {
-                reps = prescription.reps
-            }
-        }
     }
 
     private func ratingColor(_ rating: Rating) -> Color {
