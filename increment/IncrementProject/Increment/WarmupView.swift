@@ -9,31 +9,12 @@ struct WarmupView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            if let exerciseLog = sessionManager.currentExerciseLog,
-               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId] {
-                ExerciseHeader(
-                    exerciseName: profile.name,
-                    setInfo: "Warmup",
-                    goal: "\(profile.repRange.lowerBound)–\(profile.repRange.upperBound)",
-                    weight: exerciseLog.startWeight,
-                    plates: profile.plateOptions.map { plateOptions in
-                        SteelProgressionEngine.computePlateBreakdown(
-                            exerciseLog.startWeight,
-                            plates: plateOptions,
-                            barWeight: 45.0
-                        )
-                    },
-                    equipment: profile.equipment
-                )
-            }
-
             Spacer()
 
-            // Simplified warmup instruction
             if case .warmup(let step) = sessionManager.sessionState,
                let exerciseLog = sessionManager.currentExerciseLog,
-               let exercise = sessionManager.currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }) {
+               let exercise = sessionManager.currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }),
+               let profile = sessionManager.exerciseProfiles[exerciseLog.exerciseId] {
                 let exerciseIndex = sessionManager.currentSession?.workoutTemplate?.exercises.firstIndex(where: { $0.lift.id == exerciseLog.exerciseId }) ?? 0
                 let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
                     equipment: exercise.lift.equipment,
@@ -45,27 +26,26 @@ struct WarmupView: View {
                 )
 
                 VStack(spacing: 24) {
-                    // Step indicator
-                    Text("Warmup \(step + 1) of \(warmupPrescription.sets.count)")
-                        .font(.system(.caption, design: .monospaced))
-                        .opacity(0.5)
-                        .foregroundColor(.white)
-
-                    // Phase description
-                    let phaseText = warmupPhaseText(step: step, totalSets: warmupPrescription.sets.count)
-                    Text(phaseText)
+                    // Header
+                    Text(profile.name)
                         .font(.system(.title2, design: .monospaced))
-                        .fontWeight(.medium)
+                        .fontWeight(.bold)
                         .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
 
-                    Text("This prepares you for your working sets")
-                        .font(.system(.body, design: .monospaced))
-                        .opacity(0.7)
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
+                    // Simple step indicator
+                    VStack(spacing: 8) {
+                        Text("Warmup \(step + 1) of \(warmupPrescription.sets.count)")
+                            .font(.system(.title, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+
+                        Text("Grab your weight and complete the set")
+                            .font(.system(.body, design: .monospaced))
+                            .opacity(0.7)
+                            .foregroundColor(.white)
+                    }
                 }
-                .padding(.horizontal, 32)
+                .padding(24)
             }
 
             Spacer()
@@ -88,40 +68,14 @@ struct WarmupView: View {
                     )
 
                     if step < warmupPrescription.sets.count - 1 {
-                        Text("NEXT WARMUP »")
+                        Text("NEXT WARMUP →")
                     } else {
-                        Text("START WORKING SETS »")
+                        Text("START WORKING SETS →")
                     }
                 } else {
-                    Text("NEXT »")
+                    Text("NEXT →")
                 }
             }
-        }
-    }
-
-    private func warmupPhaseText(step: Int, totalSets: Int) -> String {
-        if totalSets == 3 {
-            switch step {
-            case 0:
-                return "Start light to warm up"
-            case 1:
-                return "Increase to medium weight"
-            case 2:
-                return "One more warmup set"
-            default:
-                return "Warmup set"
-            }
-        } else if totalSets == 2 {
-            switch step {
-            case 0:
-                return "Start with lighter weight"
-            case 1:
-                return "One more warmup set"
-            default:
-                return "Warmup set"
-            }
-        } else {
-            return "Warmup with lighter weight"
         }
     }
 }
