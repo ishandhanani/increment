@@ -32,11 +32,10 @@ public enum WeightUnit: String, Codable, CaseIterable {
         return "\(Int(converted.rounded())) \(self.rawValue)"
     }
 
-    /// Format weight value with optional "each" suffix for dumbbells
+    /// Format weight value (note: for dumbbells, weight represents per-dumbbell weight)
     public func formatted(_ weight: Double, isDumbbell: Bool) -> String {
         let converted = convert(fromPounds: weight)
-        let weightStr = "\(Int(converted.rounded())) \(self.rawValue)"
-        return isDumbbell ? "\(weightStr) each" : weightStr
+        return "\(Int(converted.rounded())) \(self.rawValue)"
     }
 }
 

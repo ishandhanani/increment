@@ -15,12 +15,12 @@ struct ExerciseHeader: View {
         HStack(alignment: .top) {
             // Left: Exercise name
             Text(exerciseName)
-                .font(.system(.title3, design: .monospaced))
+                .font(.system(.title2, design: .monospaced))
                 .fontWeight(.bold)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             // Right: Stats column
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: 6) {
                 Text("Set: \(setInfo)")
                 Text("Goal: \(goal)")
 
@@ -33,10 +33,10 @@ struct ExerciseHeader: View {
                         .font(.system(.caption, design: .monospaced))
                 }
             }
-            .font(.system(.caption, design: .monospaced))
+            .font(.system(.body, design: .monospaced))
         }
         .foregroundColor(.white)
-        .padding(16)
+        .padding(20)
         .background(Color.black.opacity(0.3))
     }
 }

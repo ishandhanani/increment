@@ -54,28 +54,28 @@ struct WarmupView: View {
             ActionBar {
                 sessionManager.advanceWarmup()
             } label: {
-                if case .warmup(let step) = sessionManager.sessionState,
-                   let exerciseLog = sessionManager.currentExerciseLog,
-                   let exercise = sessionManager.currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }) {
-                    let exerciseIndex = sessionManager.currentSession?.workoutTemplate?.exercises.firstIndex(where: { $0.lift.id == exerciseLog.exerciseId }) ?? 0
-                    let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
-                        equipment: exercise.lift.equipment,
-                        workingWeight: exerciseLog.startWeight,
-                        category: exercise.lift.category,
-                        priority: exercise.priority,
-                        exerciseIndex: exerciseIndex,
-                        config: exercise.lift.steelConfig
-                    )
-
-                    if step < warmupPrescription.sets.count - 1 {
-                        Text("NEXT WARMUP →")
-                    } else {
-                        Text("START WORKING SETS →")
-                    }
-                } else {
-                    Text("NEXT →")
-                }
+                Text(buttonText)
             }
         }
+    }
+
+    private var buttonText: String {
+        guard case .warmup(let step) = sessionManager.sessionState,
+              let exerciseLog = sessionManager.currentExerciseLog,
+              let exercise = sessionManager.currentSession?.workoutTemplate?.exercises.first(where: { $0.lift.id == exerciseLog.exerciseId }) else {
+            return "NEXT →"
+        }
+
+        let exerciseIndex = sessionManager.currentSession?.workoutTemplate?.exercises.firstIndex(where: { $0.lift.id == exerciseLog.exerciseId }) ?? 0
+        let warmupPrescription = SteelProgressionEngine.prescribeWarmup(
+            equipment: exercise.lift.equipment,
+            workingWeight: exerciseLog.startWeight,
+            category: exercise.lift.category,
+            priority: exercise.priority,
+            exerciseIndex: exerciseIndex,
+            config: exercise.lift.steelConfig
+        )
+
+        return step < warmupPrescription.sets.count - 1 ? "NEXT WARMUP →" : "START WORKING SETS →"
     }
 }

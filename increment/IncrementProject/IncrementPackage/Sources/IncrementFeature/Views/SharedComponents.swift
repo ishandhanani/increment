@@ -3,29 +3,35 @@ import SwiftUI
 // MARK: - Exercise Header
 
 struct ExerciseHeader: View {
+    @Environment(UserSettings.self) private var settings
+
     let exerciseId: String
     let setInfo: String
     let goal: String
     let weight: Double
+    var equipment: Equipment? = nil
 
     var body: some View {
         HStack(alignment: .top) {
             // Left: Exercise name
             Text(exerciseId)
-                .font(.system(.title3, design: .monospaced))
+                .font(.system(.title2, design: .monospaced))
                 .fontWeight(.bold)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             // Right: Stats column
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: 6) {
                 Text("Set: \(setInfo)")
                 Text("Goal: \(goal)")
-                Text("Weight: \(Int(weight)) lb")
+
+                // Format weight with user's preferred unit
+                let isDumbbell = equipment == .dumbbell
+                Text("Weight: \(settings.weightUnit.formatted(weight, isDumbbell: isDumbbell))")
             }
-            .font(.system(.caption, design: .monospaced))
+            .font(.system(.body, design: .monospaced))
         }
         .foregroundColor(.white)
-        .padding(16)
+        .padding(20)
         .background(Color.black.opacity(0.3))
     }
 }
